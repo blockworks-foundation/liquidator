@@ -1,9 +1,8 @@
-import { IDS, MangoClient, MarginAccount, NUM_TOKENS } from '@mango/client';
+import { IDS, MangoClient, MarginAccount, NUM_MARKETS } from '@blockworks-foundation/mango-client';
 
-import { Account, Connection, PublicKey, TransactionSignature } from '@solana/web3.js';
+import { Account, Connection, PublicKey } from '@solana/web3.js';
 import * as fs from 'fs';
 import { Market } from '@project-serum/serum';
-import { NUM_MARKETS } from '@mango/client/lib/layout';
 import { sleep } from './utils';
 
 async function setupMarginAccounts() {

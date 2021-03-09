@@ -1,23 +1,20 @@
-// TODO make sure funds in liquidatable account can actually be withdrawn
-//    -- can't be withdrawn if total deposits == total_borrows
-
 import {
+  findLargestTokenAccountForOwner,
   getMultipleAccounts,
   IDS,
   MangoClient,
   MangoGroup,
   MarginAccount,
-  MarginAccountLayout, nativeToUi,
-  NUM_TOKENS, parseTokenAccountData,
-  findLargestTokenAccountForOwner,
-} from '@mango/client';
-import { Account, Connection, LAMPORTS_PER_SOL, PublicKey, TransactionSignature } from '@solana/web3.js';
+  nativeToUi,
+  NUM_MARKETS,
+  NUM_TOKENS,
+  parseTokenAccountData,
+} from '@blockworks-foundation/mango-client';
+import { Account, Connection, PublicKey, TransactionSignature } from '@solana/web3.js';
 import fs from 'fs';
-import { Market, OpenOrders } from '@project-serum/serum';
-import { NUM_MARKETS } from '@mango/client/lib/layout';
-import { getUnixTs, sleep } from './utils';
-import { homedir } from 'os'
-import { TOKEN_PROGRAM_ID } from '@solana/spl-token';
+import { Market } from '@project-serum/serum';
+import { sleep } from './utils';
+import { homedir } from 'os';
 
 
 async function drainAccount(

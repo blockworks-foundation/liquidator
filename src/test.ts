@@ -1,25 +1,28 @@
 import {
-  findLargestTokenAccountForOwner,
+  createAccountInstruction,
+  encodeMangoInstruction,
+  findLargestTokenAccountForOwner, getFilteredProgramAccounts,
   IDS,
   MangoClient,
   MangoGroup,
   MarginAccount,
-  MarginAccountLayout, nativeToUi,
+  MarginAccountLayout,
+  nativeToUi, NUM_MARKETS,
   NUM_TOKENS,
-} from '@mango/client';
+} from '@blockworks-foundation/mango-client';
 import {
   Account,
-  Connection, LAMPORTS_PER_SOL,
+  Connection,
+  LAMPORTS_PER_SOL,
   PublicKey,
   SYSVAR_RENT_PUBKEY,
   Transaction,
-  TransactionInstruction, TransactionSignature,
+  TransactionInstruction,
+  TransactionSignature,
 } from '@solana/web3.js';
 import fs from 'fs';
 import { getUnixTs, sleep } from './utils';
-import { createAccountInstruction, getFilteredProgramAccounts } from '@mango/client/lib/utils';
-import { encodeMangoInstruction, NUM_MARKETS } from '@mango/client/lib/layout';
-import { Token, MintLayout, AccountLayout, TOKEN_PROGRAM_ID } from '@solana/spl-token';
+import { AccountLayout, TOKEN_PROGRAM_ID } from '@solana/spl-token';
 import { homedir } from 'os';
 import { Market } from '@project-serum/serum';
 

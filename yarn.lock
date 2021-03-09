@@ -314,6 +314,19 @@
   resolved "https://registry.yarnpkg.com/@bcoe/v8-coverage/-/v8-coverage-0.2.3.tgz#75a2e8b51cb758a7553d6804a5932d7aace75c39"
   integrity sha512-0hYQ8SB4Db5zvZB4axdMHGwEaQjkZzFjQiN9LVYvIFB2nSUHW9tYpxWriPrWDASIxiaXax83REcLxuSdnGPZtw==
 
+"@blockworks-foundation/mango-client@^0.1.4":
+  version "0.1.4"
+  resolved "https://registry.yarnpkg.com/@blockworks-foundation/mango-client/-/mango-client-0.1.4.tgz#76e2905696249626a79f67e4c6b81dc3513dc03e"
+  integrity sha512-vpXNWVQtJheezyWNqUXTSUwtcXnSlW4iPhbMJxWHl0Njz9bZFKEtEItWEiaNpxxA8FUDEwL5wKPiIioMvorg1w==
+  dependencies:
+    "@project-serum/serum" "^0.13.20"
+    "@project-serum/sol-wallet-adapter" "^0.1.4"
+    "@solana/spl-token" "0.0.13"
+    "@solana/web3.js" "^0.90.0"
+    bn.js "^5.1.2"
+    borsh "https://github.com/defactojob/borsh-js#field-mapper"
+    buffer-layout "^1.2.0"
+
 "@cnakazawa/watch@^1.0.3":
   version "1.0.4"
   resolved "https://registry.yarnpkg.com/@cnakazawa/watch/-/watch-1.0.4.tgz#f864ae85004d0fcab6f50be9141c4da368d1656a"
@@ -523,18 +536,6 @@
     "@types/node" "*"
     "@types/yargs" "^15.0.0"
     chalk "^4.0.0"
-
-"@mango/client@git+ssh://git@github.com:blockworks-foundation/mango-client-ts.git#srm_account":
-  version "0.1.2"
-  resolved "git+ssh://git@github.com:blockworks-foundation/mango-client-ts.git#ed8ef6c0f6740667f1f457107512f3c4ae505ff2"
-  dependencies:
-    "@project-serum/serum" "^0.13.20"
-    "@project-serum/sol-wallet-adapter" "^0.1.4"
-    "@solana/spl-token" "0.0.13"
-    "@solana/web3.js" "^0.90.0"
-    bn.js "^5.1.2"
-    borsh "https://github.com/defactojob/borsh-js#field-mapper"
-    buffer-layout "^1.2.0"
 
 "@nodelib/fs.scandir@2.1.4":
   version "2.1.4"
