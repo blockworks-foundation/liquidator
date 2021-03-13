@@ -13,9 +13,8 @@ import {
 import { Account, Connection, PublicKey, TransactionSignature } from '@solana/web3.js';
 import fs from 'fs';
 import { Market } from '@project-serum/serum';
-import { sleep } from './utils';
+import { notify, sleep } from './utils';
 import { homedir } from 'os';
-
 
 async function drainAccount(
   client: MangoClient,
@@ -112,6 +111,8 @@ async function runLiquidator() {
   const keyPairPath = process.env.KEYPAIR || homedir() + '/.config/solana/id.json'
   const payer = new Account(JSON.parse(fs.readFileSync(keyPairPath, 'utf-8')))
 
+  notify(`liquidator launched cluster=${cluster} group=${group_name}`);
+
   let mangoGroup = await client.getMangoGroup(connection, mangoGroupPk)
 
   const tokenWallets = (await Promise.all(
@@ -186,9 +187,10 @@ async function runLiquidator() {
               ma = await client.getMarginAccount(connection, ma.publicKey, dexProgramId)
               await drainAccount(client, connection, programId, mangoGroup, ma, markets, payer, prices, tokenWallets[NUM_TOKENS-1])
               console.log('Account drain success')
+              notify(`liquidated ${ma.toPrettyString(mangoGroup, prices)}`)
               break
             } catch (e) {
-              console.log('Failed while draining account. Trying again in 1s')
+              notify(`error: ${e}\ncould not liquidate ${ma.toPrettyString(mangoGroup, prices)}`)
               await sleep(1000)
             }
           }
@@ -196,7 +198,8 @@ async function runLiquidator() {
       }
 
     } catch (e) {
-      console.log(e)
+      notify(`unknown error: ${e}`);
+      console.error(e);
     } finally {
       await sleep(sleepTime)
     }
