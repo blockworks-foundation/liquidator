@@ -8,7 +8,7 @@ import {
   nativeToUi,
   NUM_MARKETS,
   NUM_TOKENS,
-  parseTokenAccountData,
+  parseTokenAccountData, tokenToDecimals,
 } from '@blockworks-foundation/mango-client';
 import { Account, Connection, PublicKey, TransactionSignature } from '@solana/web3.js';
 import fs from 'fs';
@@ -42,7 +42,7 @@ async function drainAccount(
   await Promise.all(cancelProms)
   console.log('all orders cancelled')
 
-  console.log()
+  ma = await client.getMarginAccount(connection, ma.publicKey, mangoGroup.dexProgramId)
   await client.settleAll(connection, programId, mangoGroup, ma, markets, payer)
   console.log('settleAll complete')
   await sleep(2000)
@@ -57,26 +57,34 @@ async function drainAccount(
   for (let i = 0; i < NUM_TOKENS - 1; i++) {
     netValues.push([i, (assets[i] - liabs[i]) * prices[i]])
   }
+
+  // Sort by those with largest net deposits and sell those first before trying to buy back the borrowed
   netValues.sort((a, b) => (b[1] - a[1]))
 
   for (let i = 0; i < NUM_TOKENS - 1; i++) {
     const marketIndex = netValues[i][0]
     const market = markets[marketIndex]
+    const tokenDecimals = tokenToDecimals[marketIndex === 0 ? 'BTC' : 'ETH']
+    const tokenDecimalAdj = Math.pow(10, tokenDecimals)
 
     if (netValues[i][1] > 0) { // sell to close
       const price = prices[marketIndex] * 0.95
-      const size = assets[marketIndex]
+      const size = Math.floor(assets[marketIndex] * tokenDecimalAdj) / tokenDecimalAdj  // round down the size
+      if (size === 0) {
+        continue
+      }
       console.log(`Sell to close ${marketIndex} ${size}`)
       await client.placeOrder(connection, programId, mangoGroup, ma, market, payer, 'sell', price, size, 'limit')
 
     } else if (netValues[i][1] < 0) { // buy to close
       const price = prices[marketIndex] * 1.05  // buy at up to 5% higher than oracle price
-      const size = liabs[marketIndex]
-      console.log(mangoGroup.getUiTotalDeposit(NUM_MARKETS), mangoGroup.getUiTotalBorrow(NUM_MARKETS))
-      console.log(ma.getUiDeposit(mangoGroup, NUM_MARKETS), ma.getUiBorrow(mangoGroup, NUM_MARKETS))
+      const size = Math.ceil(liabs[marketIndex] * tokenDecimalAdj) / tokenDecimalAdj
+
       console.log(`Buy to close ${marketIndex} ${size}`)
       await client.placeOrder(connection, programId, mangoGroup, ma, market, payer, 'buy', price, size, 'limit')
     }
+
+
   }
   await sleep(3000)
   ma = await client.getMarginAccount(connection, ma.publicKey, mangoGroup.dexProgramId)
@@ -86,8 +94,8 @@ async function drainAccount(
   console.log('Liquidation process complete\n', ma.toPrettyString(mangoGroup, prices))
 
   console.log('Withdrawing USD')
-  await client.withdraw(connection, programId, mangoGroup, ma, payer, mangoGroup.tokens[NUM_TOKENS-1], usdWallet, ma.getUiDeposit(mangoGroup, NUM_TOKENS-1) * 0.999)
 
+  await client.withdraw(connection, programId, mangoGroup, ma, payer, mangoGroup.tokens[NUM_TOKENS-1], usdWallet, ma.getUiDeposit(mangoGroup, NUM_TOKENS-1) * 0.999)
   console.log('Successfully drained account', ma.publicKey.toString())
 }
 
@@ -175,6 +183,7 @@ async function runLiquidator() {
             } else {
               await sleep(1000)
               prices = await mangoGroup.getPrices(connection)
+              ma = await client.getMarginAccount(connection, ma.publicKey, dexProgramId)
             }
           }
         }
