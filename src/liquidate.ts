@@ -166,10 +166,12 @@ async function runLiquidator() {
               break
             }
 
-            const collRatio = (assetsVal / liabsVal)
+            let collRatio = (assetsVal / liabsVal)
 
-            // FIXME: added bias to collRatio allows other liquidators to step in for testing
-            collRatio += 0.01;
+            // FIXME: added bias to collRatio to allow other liquidators to step in for testing
+            if (process.env.COLL_BIAS) {
+              collRatio += parseFloat(process.env.COLL_BIAS);
+            }
 
             if (collRatio >= mangoGroup.maintCollRatio) {
               break
