@@ -156,6 +156,7 @@ async function runLiquidator() {
       for (let ma of marginAccounts) {  // parallelize this if possible
 
         let liquidated = false
+        let description = ''
         while (true) {
           try {
             const assetsVal = ma.getAssetsVal(mangoGroup, prices)
@@ -164,15 +165,20 @@ async function runLiquidator() {
             if (liabsVal === 0) {
               break
             }
-            const collRatio = assetsVal / liabsVal
+
+            const collRatio = (assetsVal / liabsVal)
+
+            // FIXME: added bias to collRatio allows other liquidators to step in for testing
+            collRatio += 0.01;
 
             if (collRatio >= mangoGroup.maintCollRatio) {
               break
             }
 
             const deficit = liabsVal * mangoGroup.initCollRatio - assetsVal
+            description = ma.toPrettyString(mangoGroup, prices)
             console.log('liquidatable', deficit)
-            console.log(ma.toPrettyString(mangoGroup, prices), '\n')
+            console.log(description)
             await client.liquidate(connection, programId, mangoGroup, ma, payer,
               tokenWallets, [0, 0, deficit * 1.01])
             liquidated = true
@@ -196,10 +202,10 @@ async function runLiquidator() {
               ma = await client.getMarginAccount(connection, ma.publicKey, dexProgramId)
               await drainAccount(client, connection, programId, mangoGroup, ma, markets, payer, prices, tokenWallets[NUM_TOKENS-1])
               console.log('Account drain success')
-              notify(`liquidated ${ma.toPrettyString(mangoGroup, prices)}`)
+              notify(`liquidated ${description}`)
               break
             } catch (e) {
-              notify(`error: ${e}\ncould not liquidate ${ma.toPrettyString(mangoGroup, prices)}`)
+              notify(`error: ${e}\ncould not liquidate ${description}`)
               await sleep(1000)
             }
           }
