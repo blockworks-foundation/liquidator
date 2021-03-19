@@ -179,8 +179,14 @@ async function runLiquidator() {
 
             const deficit = liabsVal * mangoGroup.initCollRatio - assetsVal
             description = ma.toPrettyString(mangoGroup, prices)
+
+
+            if (deficit < 0.001) {  // too small of an account; number precision may cause errors
+              break
+            }
             console.log('liquidatable', deficit)
             console.log(description)
+
             await client.liquidate(connection, programId, mangoGroup, ma, payer,
               tokenWallets, [0, 0, deficit * 1.01])
             liquidated = true
