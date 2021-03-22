@@ -20,6 +20,14 @@ elif [ $MARKET_STR = "ETH/USDC" ]; then
   MARKET=$(cat ~/mango-client-ts/src/ids.json | jq '.devnet.spot_markets|.["ETH/USDC"]' -r)
   BASE_WALLET=$ETH_WALLET
   QUOTE_WALLET=$USDC_WALLET
+elif [ $MARKET_STR = "BTC/WUSDT" ]; then
+  MARKET=$(cat ~/mango-client-ts/src/ids.json | jq '.devnet.spot_markets|.["BTC/WUSDT"]' -r)
+  BASE_WALLET=$BTC_WALLET
+  QUOTE_WALLET=$WUSDT_WALLET
+elif [ $MARKET_STR = "ETH/WUSDT" ]; then
+  MARKET=$(cat ~/mango-client-ts/src/ids.json | jq '.devnet.spot_markets|.["ETH/WUSDT"]' -r)
+  BASE_WALLET=$ETH_WALLET
+  QUOTE_WALLET=$WUSDT_WALLET
 else
   echo "invalid args"
 fi
