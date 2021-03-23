@@ -102,7 +102,7 @@ async function drainAccount(
 async function runLiquidator() {
   const client = new MangoClient()
   const cluster = process.env.CLUSTER || 'mainnet-beta'
-  const group_name = 'BTC_ETH_USDT'
+  const group_name = process.env.GROUP_NAME || 'BTC_ETH_USDT'
   const clusterUrl = process.env.CLUSTER_URL || IDS.cluster_urls[cluster]
   const connection = new Connection(clusterUrl, 'singleGossip')
 
