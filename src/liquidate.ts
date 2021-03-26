@@ -162,7 +162,7 @@ async function runLiquidator() {
             const assetsVal = ma.getAssetsVal(mangoGroup, prices)
             const liabsVal = ma.getLiabsVal(mangoGroup, prices)
 
-            if (liabsVal === 0) {
+            if (liabsVal < 0.1) {  // too small of an account; number precision may cause errors
               break
             }
 
@@ -181,7 +181,7 @@ async function runLiquidator() {
             description = ma.toPrettyString(mangoGroup, prices)
 
 
-            if (deficit < 0.001) {  // too small of an account; number precision may cause errors
+            if (deficit < 0.1) {  // too small of an account; number precision may cause errors
               break
             }
             console.log('liquidatable', deficit)
