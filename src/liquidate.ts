@@ -153,6 +153,8 @@ async function runLiquidator() {
       )
       console.log(vaultValues)
 
+      let maxBorrAcc = ""
+      let maxBorrVal = 0;
       for (let ma of marginAccounts) {  // parallelize this if possible
 
         let liquidated = false
@@ -161,6 +163,10 @@ async function runLiquidator() {
           try {
             const assetsVal = ma.getAssetsVal(mangoGroup, prices)
             const liabsVal = ma.getLiabsVal(mangoGroup, prices)
+            if (liabsVal > maxBorrVal) {
+              maxBorrVal = liabsVal
+              maxBorrAcc = ma.publicKey.toBase58()
+            }
 
             if (liabsVal < 0.1) {  // too small of an account; number precision may cause errors
               break
@@ -218,7 +224,10 @@ async function runLiquidator() {
             }
           }
         }
+
       }
+
+      console.log(`Max Borrow Account: ${maxBorrAcc}   |   Max Borrow Val: ${maxBorrVal}`)
 
     } catch (e) {
       notify(`unknown error: ${e}`);
