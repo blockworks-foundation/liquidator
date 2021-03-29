@@ -1,5 +1,5 @@
 
-source ~/mango/cli/devnet.env
+source ~/mango-client-ts/devnet.env
 
 DEX_PROGRAM_ID=$(cat $IDS_PATH | jq .devnet.dex_program_id -r)
 
