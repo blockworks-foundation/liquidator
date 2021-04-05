@@ -37,5 +37,4 @@ else
 fi
 
 pushd ~/blockworks-foundation/serum-dex/dex/crank || exit
-cargo run -- $CLUSTER consume-events --dex-program-id $DEX_PROGRAM_ID --payer $KEYPAIR --market $MARKET --coin-wallet $BASE_WALLET --pc-wallet $QUOTE_WALLET --num-workers 1 --events-per-worker 5 --log-directory .
-popd
+cargo run -- $CLUSTER consume-events --dex-program-id $DEX_PROGRAM_ID --payer $KEYPAIR --market $MARKET --coin-wallet $BASE_WALLET --pc-wallet $QUOTE_WALLET --num-workers 1 --events-per-worker 5 --log-directory . || popd
