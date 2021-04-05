@@ -1,5 +1,6 @@
 
-source ~/mango-client-ts/devnet.env
+source ~/mango/cli/devnet.env
+solana config set --url https://devnet.solana.com
 
 DEX_PROGRAM_ID=$(cat $IDS_PATH | jq .devnet.dex_program_id -r)
 
@@ -35,6 +36,7 @@ elif [ $MARKET_STR = "ETH/WUSDT" ]; then
 else
   echo "invalid args"
 fi
+solana config set --url https://api.mainnet-beta.solana.com
 
 
 pushd ~/blockworks-foundation/serum-dex/dex/crank || exit
