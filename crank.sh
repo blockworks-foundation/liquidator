@@ -1,5 +1,5 @@
 KEYPAIR=$1
-source ~/mango/cli/devnet.env
+source ~/mango/cli/devnet.env $KEYPAIR
 
 DEX_PROGRAM_ID=$(cat $IDS_PATH | jq .devnet.dex_program_id -r)
 
