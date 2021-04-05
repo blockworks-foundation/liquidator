@@ -1,9 +1,9 @@
-
+KEYPAIR=$1
 source ~/mango/cli/devnet.env
 
 DEX_PROGRAM_ID=$(cat $IDS_PATH | jq .devnet.dex_program_id -r)
 
-MARKET_STR="${1^^}/${2^^}"
+MARKET_STR="${2^^}/${3^^}"
 
 if [ $MARKET_STR = "BTC/USDT" ]; then
   MARKET=$(cat ~/mango-client-ts/src/ids.json | jq '.devnet.spot_markets|.["BTC/USDT"]' -r)
