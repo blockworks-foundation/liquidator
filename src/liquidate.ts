@@ -8,13 +8,18 @@ import {
   nativeToUi,
   NUM_MARKETS,
   NUM_TOKENS,
-  parseTokenAccountData, tokenToDecimals,
+  parseTokenAccountData, tokenToDecimals, uiToNative,
 } from '@blockworks-foundation/mango-client';
-import { Account, Connection, PublicKey, TransactionSignature } from '@solana/web3.js';
+import { Account, Connection, PublicKey, Transaction, TransactionSignature } from '@solana/web3.js';
 import fs from 'fs';
 import { Market } from '@project-serum/serum';
 import { notify, sleep } from './utils';
 import { homedir } from 'os';
+import {
+  makeForceCancelOrdersInstruction,
+  makePartialLiquidateInstruction,
+} from '@blockworks-foundation/mango-client/lib/instruction';
+
 
 async function drainAccount(
   client: MangoClient,
@@ -83,9 +88,8 @@ async function drainAccount(
       console.log(`Buy to close ${marketIndex} ${size}`)
       await client.placeOrder(connection, programId, mangoGroup, ma, market, payer, 'buy', price, size, 'limit')
     }
-
-
   }
+
   await sleep(3000)
   ma = await client.getMarginAccount(connection, ma.publicKey, mangoGroup.dexProgramId)
   await client.settleAll(connection, programId, mangoGroup, ma, markets, payer)
@@ -237,4 +241,6 @@ async function runLiquidator() {
   }
 }
 
+
 runLiquidator()
+// runPartialLiquidator()

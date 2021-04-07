@@ -314,10 +314,9 @@
   resolved "https://registry.yarnpkg.com/@bcoe/v8-coverage/-/v8-coverage-0.2.3.tgz#75a2e8b51cb758a7553d6804a5932d7aace75c39"
   integrity sha512-0hYQ8SB4Db5zvZB4axdMHGwEaQjkZzFjQiN9LVYvIFB2nSUHW9tYpxWriPrWDASIxiaXax83REcLxuSdnGPZtw==
 
-"@blockworks-foundation/mango-client@^0.1.6":
-  version "0.1.6"
-  resolved "https://registry.yarnpkg.com/@blockworks-foundation/mango-client/-/mango-client-0.1.6.tgz#d12831e6b3c525f3903d840bcf41ef9779e5129e"
-  integrity sha512-5XBMnZza5PkOEpYl2crY1sSQQ4Bx7kimcJvHvcNngy+9tPh3CtWLnArCjUEmKqT1bo8rnG+7qtHrr/LfY65Peg==
+"@blockworks-foundation/mango-client@https://github.com/blockworks-foundation/mango-client-ts#partial_liq":
+  version "0.1.10"
+  resolved "https://github.com/blockworks-foundation/mango-client-ts#e581b5dfc7c79ec8c396ee132edaef6dfd355c8e"
   dependencies:
     "@project-serum/serum" "^0.13.20"
     "@project-serum/sol-wallet-adapter" "^0.1.4"
@@ -568,9 +567,9 @@
     buffer-layout "^1.2.0"
 
 "@project-serum/sol-wallet-adapter@^0.1.4":
-  version "0.1.5"
-  resolved "https://registry.yarnpkg.com/@project-serum/sol-wallet-adapter/-/sol-wallet-adapter-0.1.5.tgz#b8376addcb5e364f0621be639692d1c3b6d28622"
-  integrity sha512-g2ugWI3mZu/+aXWA/hpDRly0lTwjfTeOQXUs5DNuZCbxXRdNXe1LLfjzzoZEMpURavqO725UwBkKxC5acvgoMw==
+  version "0.1.8"
+  resolved "https://registry.yarnpkg.com/@project-serum/sol-wallet-adapter/-/sol-wallet-adapter-0.1.8.tgz#90c6c1da793d32ed4ba3c67c5702a5bc804ef197"
+  integrity sha512-lKMgp7bsKpkrtBtIaEjtGuUMke0GUqFUL39Z7cjqsQpTVhkU5Ez4zHyjhXqAEORRGLFbwx/+H6HLpwppxpUDMQ==
   dependencies:
     bs58 "^4.0.1"
     eventemitter3 "^4.0.4"
@@ -753,9 +752,9 @@
   integrity sha512-oVfRvqHV/V6D1yifJbVRU3TMp8OT6o6BG+U9MkwuJ3U8/CsDHvalRpsxBqivn71ztOFZBTfJMvETbqHiaNSj7Q==
 
 "@types/node@*":
-  version "14.14.34"
-  resolved "https://registry.yarnpkg.com/@types/node/-/node-14.14.34.tgz#07935194fc049069a1c56c0c274265abeddf88da"
-  integrity sha512-dBPaxocOK6UVyvhbnpFIj2W+S+1cBTkHQbFQfeeJhoKFbzYcVUGHvddeWPSucKATb3F0+pgDq0i6ghEaZjsugA==
+  version "14.14.37"
+  resolved "https://registry.yarnpkg.com/@types/node/-/node-14.14.37.tgz#a3dd8da4eb84a996c36e331df98d82abd76b516e"
+  integrity sha512-XYmBiy+ohOR4Lh5jE379fV2IU+6Jn4g5qASinhitfyO71b/sCo6MKsMLF5tc7Zf2CE8hViVQyYSobJNke8OvUw==
 
 "@types/node@^12.12.54":
   version "12.20.4"
@@ -1205,9 +1204,9 @@ boolbase@~1.0.0:
   resolved "https://registry.yarnpkg.com/boolbase/-/boolbase-1.0.0.tgz#68dff5fbe60c51eb37725ea9e3ed310dcc1e776e"
   integrity sha1-aN/1++YMUes3cl6p4+0xDcwed24=
 
-"borsh@git+https://github.com/defactojob/borsh-js.git#field-mapper":
+"borsh@https://github.com/defactojob/borsh-js#field-mapper":
   version "0.3.1"
-  resolved "git+https://github.com/defactojob/borsh-js.git#33a0d24af281112c0a48efb3fa503f3212443de9"
+  resolved "https://github.com/defactojob/borsh-js#33a0d24af281112c0a48efb3fa503f3212443de9"
   dependencies:
     "@types/bn.js" "^4.11.5"
     bn.js "^5.0.0"
