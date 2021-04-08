@@ -2,7 +2,7 @@ import {
   findLargestTokenAccountForOwner,
   getMultipleAccounts,
   IDS,
-  MangoClient, nativeToUi, NUM_MARKETS, NUM_TOKENS, parseTokenAccountData, uiToNative,
+  MangoClient, nativeToUi, NUM_MARKETS, NUM_TOKENS, parseTokenAccount, parseTokenAccountData, uiToNative,
 } from '@blockworks-foundation/mango-client';
 import { Account, Connection, PublicKey, Transaction } from '@solana/web3.js';
 import { homedir } from 'os';
@@ -57,7 +57,8 @@ async function runPartialLiquidator() {
   while (true) {
     try {
       mangoGroup = await client.getMangoGroup(connection, mangoGroupPk)
-      const marginAccounts = await client.getAllMarginAccounts(connection, programId, mangoGroup)
+      // const marginAccounts = await client.getAllMarginAccounts(connection, programId, mangoGroup)
+      const marginAccounts = [await client.getMarginAccount(connection, new PublicKey("85zCT5JsSmE5tgF42gPH6xxeVic5tXutAQDkSwfm9FN9"), mangoGroup.dexProgramId)]
       let prices = await mangoGroup.getPrices(connection)  // TODO put this on websocket as well
 
       console.log(prices)
@@ -93,17 +94,20 @@ async function runPartialLiquidator() {
               break
             }
 
-            let collRatio = (assetsVal / liabsVal)
-            if (collRatio + coll_bias >= mangoGroup.maintCollRatio) {
-              break
+            if (!ma.beingLiquidated) {
+              let collRatio = (assetsVal / liabsVal)
+              if (collRatio + coll_bias >= mangoGroup.maintCollRatio) {
+                break
+              }
+
+              const deficit = liabsVal * mangoGroup.initCollRatio - assetsVal
+              if (deficit < 0.1) {  // too small of an account; number precision may cause errors
+                break
+              }
             }
 
-            const deficit = liabsVal * mangoGroup.initCollRatio - assetsVal
-            if (deficit < 0.1) {  // too small of an account; number precision may cause errors
-              break
-            }
             description = ma.toPrettyString(mangoGroup, prices)
-            console.log('liquidatable', deficit)
+            console.log('liquidatable')
             console.log(description)
 
             // find the market with the most value in OpenOrdersAccount
@@ -120,11 +124,17 @@ async function runPartialLiquidator() {
                 maxMarketVal = marketVal
               }
             }
-
             const transaction = new Transaction()
             if (maxMarketIndex !== -1) {
               // force cancel orders on this particular market
               const spotMarket = markets[maxMarketIndex]
+              const [bids, asks] = await Promise.all([spotMarket.loadBids(connection), spotMarket.loadAsks(connection)])
+              const openOrdersAccount = ma.openOrdersAccounts[maxMarketIndex]
+              if (openOrdersAccount === undefined) {
+                console.log('error state')
+                continue
+              }
+              let numOrders = spotMarket.filterForOpenOrders(bids, asks, [openOrdersAccount]).length
               const dexSigner = await PublicKey.createProgramAddress(
                 [
                   spotMarket.publicKey.toBuffer(),
@@ -132,26 +142,34 @@ async function runPartialLiquidator() {
                 ],
                 spotMarket.programId
               )
-              const instruction = makeForceCancelOrdersInstruction(
-                programId,
-                mangoGroup.publicKey,
-                payer.publicKey,
-                ma.publicKey,
-                mangoGroup.vaults[maxMarketIndex],
-                mangoGroup.vaults[NUM_TOKENS-1],
-                spotMarket.publicKey,
-                spotMarket.bidsAddress,
-                spotMarket.asksAddress,
-                mangoGroup.signerKey,
-                spotMarket['_decoded'].eventQueue,
-                spotMarket['_decoded'].baseVault,
-                spotMarket['_decoded'].quoteVault,
-                dexSigner,
-                spotMarket.programId,
-                ma.openOrders,
-                mangoGroup.oracles
-              )
-              transaction.add(instruction)
+              let numInstrs = 0
+              while (numInstrs < 10) {
+                const instruction = makeForceCancelOrdersInstruction(
+                  programId,
+                  mangoGroup.publicKey,
+                  payer.publicKey,
+                  ma.publicKey,
+                  mangoGroup.vaults[maxMarketIndex],
+                  mangoGroup.vaults[NUM_TOKENS-1],
+                  spotMarket.publicKey,
+                  spotMarket.bidsAddress,
+                  spotMarket.asksAddress,
+                  mangoGroup.signerKey,
+                  spotMarket['_decoded'].eventQueue,
+                  spotMarket['_decoded'].baseVault,
+                  spotMarket['_decoded'].quoteVault,
+                  dexSigner,
+                  spotMarket.programId,
+                  ma.openOrders,
+                  mangoGroup.oracles
+                )
+                transaction.add(instruction)
+                numOrders -= 6
+                numInstrs += 1
+                if (numOrders <= 0) {
+                  break
+                }
+              }
             }
 
             // I'm assuming here that there is at least one asset greater than 0 and one less than
@@ -175,11 +193,9 @@ async function runPartialLiquidator() {
             // choose the max
             const liqorAccs = await getMultipleAccounts(connection, tokenWallets)
             const liqorTokenValues = liqorAccs.map(
-              (a, i) =>
-                nativeToUi(parseTokenAccountData(a.accountInfo.data).amount, mangoGroup.mintDecimals[i])
+              (a) => parseTokenAccount(a.accountInfo.data).amount
             )
 
-            console.log(minNetIndex, maxNetIndex)
             transaction.add(makePartialLiquidateInstruction(
               programId,
               mangoGroup.publicKey,
@@ -192,9 +208,14 @@ async function runPartialLiquidator() {
               mangoGroup.signerKey,
               ma.openOrders,
               mangoGroup.oracles,
-              uiToNative(0.001, mangoGroup.mintDecimals[minNetIndex])
+              liqorTokenValues[minNetIndex]
             ))
 
+            // transaction.recentBlockhash = (await connection.getRecentBlockhash('singleGossip')).blockhash
+            // transaction.setSigners(payer.publicKey)
+            // transaction.sign(payer)
+            // const raw_tx = transaction.serialize()
+            // console.log('tx size', raw_tx.length)
             await client.sendTransaction(connection, transaction, payer, [])
             console.log('success liquidation')
             liquidated = true

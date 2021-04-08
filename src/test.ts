@@ -249,14 +249,14 @@ async function drainAccount(
 
 async function testAll() {
   const client = new MangoClient()
-  const cluster = 'mainnet-beta'
+  const cluster = 'devnet'
   const clusterUrl = process.env.CLUSTER_URL || IDS.cluster_urls[cluster]
   const connection = new Connection(clusterUrl, 'singleGossip')
   const programId = new PublicKey(IDS[cluster].mango_program_id)
   const dexProgramId = new PublicKey(IDS[cluster].dex_program_id)
   const mangoGroupPk = new PublicKey(IDS[cluster].mango_groups['BTC_ETH_USDT'].mango_group_pk)
 
-  const keyPairPath = process.env.KEYPAIR || homedir() + '/.config/solana/id.json'
+  const keyPairPath = process.env.KEYPAIR || homedir() + '/.config/solana/id2.json'
 
   const payer = new Account(JSON.parse(fs.readFileSync(keyPairPath, 'utf-8')))
   const mangoGroup = await client.getMangoGroup(connection, mangoGroupPk)
@@ -340,7 +340,21 @@ async function testAll() {
     console.log(mangoGroup.borrowLimits.map((b, i) => nativeToUi(b, mangoGroup.mintDecimals[i])))
   }
 
-  await testBorrowLimits()
+  async function placeMultipleOrders() {
+    const marginAccountPk = new PublicKey("85zCT5JsSmE5tgF42gPH6xxeVic5tXutAQDkSwfm9FN9")
+    const marginAccount = await client.getMarginAccount(connection, marginAccountPk, dexProgramId)
+    const market = await Market.load(connection, mangoGroup.spotMarkets[1], { skipPreflight: true, commitment: 'singleGossip'}, mangoGroup.dexProgramId)
+
+    for (let i = 0; i < 12; i++) {
+      const price = 1010 + 10 * i
+      await client.placeAndSettle(connection, programId, mangoGroup, marginAccount, market, payer, "sell", price, 0.001)
+      await sleep(500)
+    }
+
+  }
+
+  placeMultipleOrders()
+  // await testBorrowLimits()
   // await testGetOpenOrdersLatency()
   // await testPlaceCancelOrder()
   // await testDrainAccount()

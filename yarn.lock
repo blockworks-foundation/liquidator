@@ -316,7 +316,7 @@
 
 "@blockworks-foundation/mango-client@https://github.com/blockworks-foundation/mango-client-ts#partial_liq":
   version "0.1.10"
-  resolved "https://github.com/blockworks-foundation/mango-client-ts#e581b5dfc7c79ec8c396ee132edaef6dfd355c8e"
+  resolved "https://github.com/blockworks-foundation/mango-client-ts#e10fadd7bb9dee4f04994ad6cf293b4654c7edf1"
   dependencies:
     "@project-serum/serum" "^0.13.20"
     "@project-serum/sol-wallet-adapter" "^0.1.4"
