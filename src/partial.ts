@@ -24,88 +24,6 @@ import {
 import BN = require('bn.js');
 
 
-async function drainAccount(
-  client: MangoClient,
-  connection: Connection,
-  programId: PublicKey,
-  mangoGroup: MangoGroup,
-  ma: MarginAccount,
-  markets: Market[],
-  payer: Account,
-  prices: number[],
-  usdWallet: PublicKey
-) {
-  // Cancel all open orders
-  const bidsPromises = markets.map((market) => market.loadBids(connection))
-  const asksPromises = markets.map((market) => market.loadAsks(connection))
-  const books = await Promise.all(bidsPromises.concat(asksPromises))
-  const bids = books.slice(0, books.length / 2)
-  const asks = books.slice(books.length / 2, books.length)
-
-  const cancelProms: Promise<TransactionSignature[]>[] = []
-  for (let i = 0; i < NUM_MARKETS; i++) {
-    cancelProms.push(ma.cancelAllOrdersByMarket(connection, client, programId, mangoGroup, markets[i], bids[i], asks[i], payer))
-  }
-
-  await Promise.all(cancelProms)
-  console.log('all orders cancelled')
-
-  ma = await client.getMarginAccount(connection, ma.publicKey, mangoGroup.dexProgramId)
-  await client.settleAll(connection, programId, mangoGroup, ma, markets, payer)
-  console.log('settleAll complete')
-  await sleep(2000)
-  ma = await client.getMarginAccount(connection, ma.publicKey, mangoGroup.dexProgramId)
-
-  // sort non-quote currency assets by value
-  const assets = ma.getAssets(mangoGroup)
-  const liabs = ma.getLiabs(mangoGroup)
-
-  const netValues: [number, number][] = []
-
-  for (let i = 0; i < NUM_TOKENS - 1; i++) {
-    netValues.push([i, (assets[i] - liabs[i]) * prices[i]])
-  }
-
-  // Sort by those with largest net deposits and sell those first before trying to buy back the borrowed
-  netValues.sort((a, b) => (b[1] - a[1]))
-
-  for (let i = 0; i < NUM_TOKENS - 1; i++) {
-    const marketIndex = netValues[i][0]
-    const market = markets[marketIndex]
-    const tokenDecimals = tokenToDecimals[marketIndex === 0 ? 'BTC' : 'ETH']
-    const tokenDecimalAdj = Math.pow(10, tokenDecimals)
-
-    if (netValues[i][1] > 0) { // sell to close
-      const price = prices[marketIndex] * 0.95
-      const size = Math.floor(assets[marketIndex] * tokenDecimalAdj) / tokenDecimalAdj  // round down the size
-      if (size === 0) {
-        continue
-      }
-      console.log(`Sell to close ${marketIndex} ${size}`)
-      await client.placeOrder(connection, programId, mangoGroup, ma, market, payer, 'sell', price, size, 'limit')
-
-    } else if (netValues[i][1] < 0) { // buy to close
-      const price = prices[marketIndex] * 1.05  // buy at up to 5% higher than oracle price
-      const size = Math.ceil(liabs[marketIndex] * tokenDecimalAdj) / tokenDecimalAdj
-
-      console.log(`Buy to close ${marketIndex} ${size}`)
-      await client.placeOrder(connection, programId, mangoGroup, ma, market, payer, 'buy', price, size, 'limit')
-    }
-  }
-
-  await sleep(3000)
-  ma = await client.getMarginAccount(connection, ma.publicKey, mangoGroup.dexProgramId)
-  await client.settleAll(connection, programId, mangoGroup, ma, markets, payer)
-  console.log('settleAll complete')
-  ma = await client.getMarginAccount(connection, ma.publicKey, mangoGroup.dexProgramId)
-  console.log('Liquidation process complete\n', ma.toPrettyString(mangoGroup, prices))
-
-  console.log('Withdrawing USD')
-
-  await client.withdraw(connection, programId, mangoGroup, ma, payer, mangoGroup.tokens[NUM_TOKENS-1], usdWallet, ma.getUiDeposit(mangoGroup, NUM_TOKENS-1) * 0.999)
-  console.log('Successfully drained account', ma.publicKey.toString())
-}
-
 /*
   After a liquidation, the amounts in each wallet become unbalanced
   Make sure to sell or buy quantities different from the target on base currencies
@@ -119,7 +37,8 @@ async function balanceWallets(
   liqor: Account,
   liqorWallets: PublicKey[],
   liqorValuesUi: number[],
-  liqorOpenOrdersKeys: PublicKey[]
+  liqorOpenOrdersKeys: PublicKey[],
+  targets: number[]
 ) {
   const liqorOpenOrders = await Promise.all(liqorOpenOrdersKeys.map((pk) => OpenOrders.load(connection, pk, mangoGroup.dexProgramId)))
   let updateWallets = false
@@ -141,7 +60,6 @@ async function balanceWallets(
   }
 
   // TODO cancel outstanding orders as well
-  const targets = [0.1, 2]
   const diffs: number[] = []
   const netValues: [number, number][] = []
   // Go to each base currency and see if it's above or below target
@@ -180,7 +98,7 @@ async function balanceWallets(
           feeDiscountPubkey: null
         }
       )
-      console.log("settling funds")
+      console.log(`Place order successful: ${txid}; Settling funds`)
       await market.settleFunds(connection, liqor, liqorOpenOrders[marketIndex], liqorWallets[marketIndex], liqorWallets[NUM_TOKENS-1])
 
     } else if (netValues[i][1] < 0) { // buy to close
@@ -201,7 +119,7 @@ async function balanceWallets(
           feeDiscountPubkey: null
         }
       )
-      console.log("settling funds")
+      console.log(`Place order successful: ${txid}; Settling funds`)
       await market.settleFunds(connection, liqor, liqorOpenOrders[marketIndex], liqorWallets[marketIndex], liqorWallets[NUM_TOKENS-1])
     }
   }
@@ -212,6 +130,8 @@ async function runPartialLiquidator() {
   const cluster = process.env.CLUSTER || 'mainnet-beta'
   const group_name = process.env.GROUP_NAME || 'BTC_ETH_USDT'
   const clusterUrl = process.env.CLUSTER_URL || IDS.cluster_urls[cluster]
+  const targetsStr = process.env.TARGETS || "0.1 2"
+  const targets = targetsStr.split(' ').map((s) => parseFloat(s))
   const connection = new Connection(clusterUrl, 'singleGossip')
 
   // The address of the Mango Program on the blockchain
@@ -227,7 +147,7 @@ async function runPartialLiquidator() {
   const keyPairPath = process.env.KEYPAIR || homedir() + '/.config/solana/id.json'
   const payer = new Account(JSON.parse(fs.readFileSync(keyPairPath, 'utf-8')))
 
-  notify(`liquidator launched cluster=${cluster} group=${group_name}`);
+  notify(`partial liquidator launched cluster=${cluster} group=${group_name}`);
 
   let mangoGroup = await client.getMangoGroup(connection, mangoGroupPk)
 
@@ -258,9 +178,6 @@ async function runPartialLiquidator() {
   while (true) {
     try {
       mangoGroup = await client.getMangoGroup(connection, mangoGroupPk)
-      // const marginAccounts = await client.getAllMarginAccounts(connection, programId, mangoGroup)
-      // const marginAccounts = [await client.getMarginAccount(connection, new PublicKey("85zCT5JsSmE5tgF42gPH6xxeVic5tXutAQDkSwfm9FN9"), mangoGroup.dexProgramId)]
-      // let prices = await mangoGroup.getPrices(connection)  // TODO put this on websocket as well
 
       let [marginAccounts, prices, vaultAccs, liqorAccs] = await Promise.all([
         client.getAllMarginAccounts(connection, programId, mangoGroup),
@@ -420,7 +337,8 @@ async function runPartialLiquidator() {
             ))
 
             await client.sendTransaction(connection, transaction, payer, [])
-            console.log('success liquidation')
+            console.log('Successful partial liquidation')
+            notify(``)
             liquidated = true
             break
           } catch (e) {
@@ -436,7 +354,7 @@ async function runPartialLiquidator() {
       }
       console.log(`Max Borrow Account: ${maxBorrAcc}   |   Max Borrow Val: ${maxBorrVal}`)
 
-      await balanceWallets(connection, mangoGroup, prices, markets, payer, tokenWallets, liqorTokenUi, liqorOpenOrdersKeys)
+      await balanceWallets(connection, mangoGroup, prices, markets, payer, tokenWallets, liqorTokenUi, liqorOpenOrdersKeys, targets)
 
     } catch (e) {
       notify(`unknown error: ${e}`);
