@@ -51,13 +51,11 @@ async function balanceWallets(
     }
   }
 
-  if (updateWallets) {
-    await sleep(1000)
-    const liqorWalletAccounts = await getMultipleAccounts(connection, liqorWallets)
-    liqorValuesUi = liqorWalletAccounts.map(
-      (a, i) => nativeToUi(parseTokenAccountData(a.accountInfo.data).amount, mangoGroup.mintDecimals[i])
-    )
-  }
+  await sleep(1000)
+  const liqorWalletAccounts = await getMultipleAccounts(connection, liqorWallets)
+  liqorValuesUi = liqorWalletAccounts.map(
+    (a, i) => nativeToUi(parseTokenAccountData(a.accountInfo.data).amount, mangoGroup.mintDecimals[i])
+  )
 
   // TODO cancel outstanding orders as well
   const diffs: number[] = []
@@ -338,7 +336,7 @@ async function runPartialLiquidator() {
 
             await client.sendTransaction(connection, transaction, payer, [])
             console.log('Successful partial liquidation')
-            notify(``)
+            notify(`Successful partial liquidation ${ma.publicKey.toBase58()}`)
             liquidated = true
             break
           } catch (e) {
