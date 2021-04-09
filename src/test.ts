@@ -345,7 +345,7 @@ async function testAll() {
     const marginAccount = await client.getMarginAccount(connection, marginAccountPk, dexProgramId)
     const market = await Market.load(connection, mangoGroup.spotMarkets[1], { skipPreflight: true, commitment: 'singleGossip'}, mangoGroup.dexProgramId)
 
-    for (let i = 0; i < 12; i++) {
+    for (let i = 0; i < 45; i++) {
       const price = 1010 + 10 * i
       await client.placeAndSettle(connection, programId, mangoGroup, marginAccount, market, payer, "sell", price, 0.001)
       await sleep(500)
