@@ -73,9 +73,7 @@ async function balanceWallets(
     const marketIndex = netValues[i][0]
     const market = markets[marketIndex]
     const tokenDecimals = tokenToDecimals[marketIndex === 0 ? 'BTC' : 'ETH']  // TODO make this mapping allow arbitrary mango groups
-    // const tokenDecimalAdj = Math.pow(10, tokenDecimals)
-    const tokenDecimalAdj = Math.pow(10, 3)
-
+    const tokenDecimalAdj = Math.pow(10, tokenDecimals)
     if (netValues[i][1] > 0) { // sell to close
       const price = prices[marketIndex] * 0.95
       const size = Math.floor(diffs[marketIndex] * tokenDecimalAdj) / tokenDecimalAdj  // round down the size
