@@ -163,58 +163,55 @@ async function runLiquidator() {
 
         let liquidated = false
         let description = ''
-        while (true) {
-          try {
-            const assetsVal = ma.getAssetsVal(mangoGroup, prices)
-            const liabsVal = ma.getLiabsVal(mangoGroup, prices)
-            if (liabsVal > maxBorrVal) {
-              maxBorrVal = liabsVal
-              maxBorrAcc = ma.publicKey.toBase58()
-            }
+        try {
+          const assetsVal = ma.getAssetsVal(mangoGroup, prices)
+          const liabsVal = ma.getLiabsVal(mangoGroup, prices)
+          if (liabsVal > maxBorrVal) {
+            maxBorrVal = liabsVal
+            maxBorrAcc = ma.publicKey.toBase58()
+          }
 
-            if (liabsVal < 0.1) {  // too small of an account; number precision may cause errors
-              break
-            }
-
-            let collRatio = (assetsVal / liabsVal)
-
-            // FIXME: added bias to collRatio to allow other liquidators to step in for testing
-            if (process.env.COLL_BIAS) {
-              collRatio += parseFloat(process.env.COLL_BIAS);
-            }
-
-            if (collRatio >= mangoGroup.maintCollRatio) {
-              break
-            }
-
-            const deficit = liabsVal * mangoGroup.initCollRatio - assetsVal
-            description = ma.toPrettyString(mangoGroup, prices)
-
-            if (deficit < 0.1) {  // too small of an account; number precision may cause errors
-              break
-            }
-            console.log('liquidatable', deficit)
-            console.log(description)
-
-            await client.liquidate(connection, programId, mangoGroup, ma, payer,
-              tokenWallets, [0, 0, deficit * 1.01 + 5])
-            liquidated = true
+          if (liabsVal < 0.1) {  // too small of an account; number precision may cause errors
             break
-          } catch (e) {
-            if (!e.timeout) {
-              throw e
-            } else {
-              await sleep(1000)
-              prices = await mangoGroup.getPrices(connection)
-              ma = await client.getMarginAccount(connection, ma.publicKey, dexProgramId)
-            }
+          }
+          let collRatio = (assetsVal / liabsVal)
+
+          // FIXME: added bias to collRatio to allow other liquidators to step in for testing
+          if (process.env.COLL_BIAS) {
+            collRatio += parseFloat(process.env.COLL_BIAS);
+          }
+          if (collRatio >= mangoGroup.maintCollRatio) {
+            break
+          }
+
+          const deficit = liabsVal * mangoGroup.initCollRatio - assetsVal
+          description = ma.toPrettyString(mangoGroup, prices)
+
+          if (deficit < 0.1) {  // too small of an account; number precision may cause errors
+            break
+          }
+          console.log('liquidatable', deficit)
+          console.log(description)
+
+          await client.liquidate(connection, programId, mangoGroup, ma, payer,
+            tokenWallets, [0, 0, deficit * 1.01 + 5])
+          liquidated = true
+        } catch (e) {
+          if (!e.timeout) {
+            throw e
+          } else {
+            await sleep(1000)
+            prices = await mangoGroup.getPrices(connection)
+            ma = await client.getMarginAccount(connection, ma.publicKey, dexProgramId)
           }
         }
+
         if (liquidated) {
           console.log('liquidation success')
           console.log(ma.toPrettyString(mangoGroup, prices))
 
-          while (true) {
+          let tries = 3
+          while (tries > 0) {
             try {
               ma = await client.getMarginAccount(connection, ma.publicKey, dexProgramId)
               await drainAccount(client, connection, programId, mangoGroup, ma, markets, payer, prices, tokenWallets[NUM_TOKENS-1])
@@ -222,7 +219,8 @@ async function runLiquidator() {
               notify(`liquidated ${description}`)
               break
             } catch (e) {
-              notify(`error: ${e}\ncould not liquidate ${description}`)
+              tries -= 1
+              notify(`error: ${e}\ncould not drain account ${description}\ntries left: ${tries}`)
               await sleep(1000)
             }
           }

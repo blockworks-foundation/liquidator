@@ -207,149 +207,146 @@ async function runPartialLiquidator() {
 
         let liquidated = false
         let description = ''
-        while (true) {
-          try {
-            const assetsVal = ma.getAssetsVal(mangoGroup, prices)
-            const liabsVal = ma.getLiabsVal(mangoGroup, prices)
-            if (liabsVal > maxBorrVal) {
-              maxBorrVal = liabsVal
-              maxBorrAcc = ma.publicKey.toBase58()
-            }
+        try {
+          const assetsVal = ma.getAssetsVal(mangoGroup, prices)
+          const liabsVal = ma.getLiabsVal(mangoGroup, prices)
+          if (liabsVal > maxBorrVal) {
+            maxBorrVal = liabsVal
+            maxBorrAcc = ma.publicKey.toBase58()
+          }
 
-            if (liabsVal < 0.1) {  // too small of an account; number precision may cause errors
+          if (liabsVal < 0.1) {  // too small of an account; number precision may cause errors
+            break
+          }
+
+          if (!ma.beingLiquidated) {
+            let collRatio = (assetsVal / liabsVal)
+            if (collRatio + coll_bias >= mangoGroup.maintCollRatio) {
               break
             }
 
-            if (!ma.beingLiquidated) {
-              let collRatio = (assetsVal / liabsVal)
-              if (collRatio + coll_bias >= mangoGroup.maintCollRatio) {
-                break
-              }
-
-              const deficit = liabsVal * mangoGroup.initCollRatio - assetsVal
-              if (deficit < 0.1) {  // too small of an account; number precision may cause errors
-                break
-              }
+            const deficit = liabsVal * mangoGroup.initCollRatio - assetsVal
+            if (deficit < 0.1) {  // too small of an account; number precision may cause errors
+              break
             }
+          }
+          description = ma.toPrettyString(mangoGroup, prices)
+          console.log(`Liquidatable\n${description}\nbeingLiquidated: ${ma.beingLiquidated}`)
+          notify(`Liquidatable\n${description}\nbeingLiquidated: ${ma.beingLiquidated}`)
 
-            description = ma.toPrettyString(mangoGroup, prices)
-            console.log('liquidatable')
-            console.log(description)
-
-            // find the market with the most value in OpenOrdersAccount
-            let maxMarketIndex = -1
-            let maxMarketVal = 0
-            for (let i = 0; i < NUM_MARKETS; i++) {
-              const openOrdersAccount = ma.openOrdersAccounts[i]
-              if (openOrdersAccount === undefined) {
-                continue
-              }
-              const marketVal = openOrdersAccount.quoteTokenTotal.toNumber() + openOrdersAccount.baseTokenTotal.toNumber() * prices[i]
-              if (marketVal > maxMarketVal) {
-                maxMarketIndex = i
-                maxMarketVal = marketVal
-              }
+          // find the market with the most value in OpenOrdersAccount
+          let maxMarketIndex = -1
+          let maxMarketVal = 0
+          for (let i = 0; i < NUM_MARKETS; i++) {
+            const openOrdersAccount = ma.openOrdersAccounts[i]
+            if (openOrdersAccount === undefined) {
+              continue
             }
-            const transaction = new Transaction()
-            if (maxMarketIndex !== -1) {
-              // force cancel orders on this particular market
-              const spotMarket = markets[maxMarketIndex]
-              const [bids, asks] = await Promise.all([spotMarket.loadBids(connection), spotMarket.loadAsks(connection)])
-              const openOrdersAccount = ma.openOrdersAccounts[maxMarketIndex]
-              if (openOrdersAccount === undefined) {
-                console.log('error state')
-                continue
-              }
-              let numOrders = spotMarket.filterForOpenOrders(bids, asks, [openOrdersAccount]).length
-              const dexSigner = await PublicKey.createProgramAddress(
-                [
-                  spotMarket.publicKey.toBuffer(),
-                  spotMarket['_decoded'].vaultSignerNonce.toArrayLike(Buffer, 'le', 8)
-                ],
-                spotMarket.programId
+            const marketVal = openOrdersAccount.quoteTokenTotal.toNumber() + openOrdersAccount.baseTokenTotal.toNumber() * prices[i]
+            if (marketVal > maxMarketVal) {
+              maxMarketIndex = i
+              maxMarketVal = marketVal
+            }
+          }
+          const transaction = new Transaction()
+          if (maxMarketIndex !== -1) {
+            // force cancel orders on this particular market
+            const spotMarket = markets[maxMarketIndex]
+            const [bids, asks] = await Promise.all([spotMarket.loadBids(connection), spotMarket.loadAsks(connection)])
+            const openOrdersAccount = ma.openOrdersAccounts[maxMarketIndex]
+            if (openOrdersAccount === undefined) {
+              console.log('error state')
+              continue
+            }
+            let numOrders = spotMarket.filterForOpenOrders(bids, asks, [openOrdersAccount]).length
+            const dexSigner = await PublicKey.createProgramAddress(
+              [
+                spotMarket.publicKey.toBuffer(),
+                spotMarket['_decoded'].vaultSignerNonce.toArrayLike(Buffer, 'le', 8)
+              ],
+              spotMarket.programId
+            )
+
+            for (let i = 0; i < 10; i++) {
+              const instruction = makeForceCancelOrdersInstruction(
+                programId,
+                mangoGroup.publicKey,
+                payer.publicKey,
+                ma.publicKey,
+                mangoGroup.vaults[maxMarketIndex],
+                mangoGroup.vaults[NUM_TOKENS-1],
+                spotMarket.publicKey,
+                spotMarket.bidsAddress,
+                spotMarket.asksAddress,
+                mangoGroup.signerKey,
+                spotMarket['_decoded'].eventQueue,
+                spotMarket['_decoded'].baseVault,
+                spotMarket['_decoded'].quoteVault,
+                dexSigner,
+                spotMarket.programId,
+                ma.openOrders,
+                mangoGroup.oracles,
+                new BN(cancelLimit)
               )
-
-              for (let i = 0; i < 10; i++) {
-                const instruction = makeForceCancelOrdersInstruction(
-                  programId,
-                  mangoGroup.publicKey,
-                  payer.publicKey,
-                  ma.publicKey,
-                  mangoGroup.vaults[maxMarketIndex],
-                  mangoGroup.vaults[NUM_TOKENS-1],
-                  spotMarket.publicKey,
-                  spotMarket.bidsAddress,
-                  spotMarket.asksAddress,
-                  mangoGroup.signerKey,
-                  spotMarket['_decoded'].eventQueue,
-                  spotMarket['_decoded'].baseVault,
-                  spotMarket['_decoded'].quoteVault,
-                  dexSigner,
-                  spotMarket.programId,
-                  ma.openOrders,
-                  mangoGroup.oracles,
-                  new BN(cancelLimit)
-                )
-                transaction.add(instruction)
-                numOrders -= cancelLimit
-                if (numOrders <= 0) {
-                  break
-                }
+              transaction.add(instruction)
+              numOrders -= cancelLimit
+              if (numOrders <= 0) {
+                break
               }
             }
+          }
 
-            // I'm assuming here that there is at least one asset greater than 0 and one less than
-            // In reality, assets may be exactly 0
-            const deposits = ma.getAssets(mangoGroup)
-            const borrows = ma.getLiabs(mangoGroup)
-            let minNet = 0
-            let minNetIndex = -1
-            let maxNet = 0
-            let maxNetIndex = NUM_TOKENS-1
-            for (let i = 0; i < NUM_TOKENS; i++) {
-              const netDeposit = (deposits[i] - borrows[i]) * prices[i]
-              if (netDeposit < minNet) {
-                minNet = netDeposit
-                minNetIndex = i
-              } else if (netDeposit > maxNet) {
-                maxNet = netDeposit
-                maxNetIndex = i
-              }
+          // Find the market with the highest borrows and lowest deposits
+          const deposits = ma.getAssets(mangoGroup)
+          const borrows = ma.getLiabs(mangoGroup)
+          let minNet = 0
+          let minNetIndex = -1
+          let maxNet = 0
+          let maxNetIndex = NUM_TOKENS-1
+          for (let i = 0; i < NUM_TOKENS; i++) {
+            const netDeposit = (deposits[i] - borrows[i]) * prices[i]
+            if (netDeposit < minNet) {
+              minNet = netDeposit
+              minNetIndex = i
+            } else if (netDeposit > maxNet) {
+              maxNet = netDeposit
+              maxNetIndex = i
             }
+          }
 
-            transaction.add(makePartialLiquidateInstruction(
-              programId,
-              mangoGroup.publicKey,
-              payer.publicKey,
-              liqorAccs[minNetIndex].publicKey,
-              liqorAccs[maxNetIndex].publicKey,
-              ma.publicKey,
-              mangoGroup.vaults[minNetIndex],
-              mangoGroup.vaults[maxNetIndex],
-              mangoGroup.signerKey,
-              ma.openOrders,
-              mangoGroup.oracles,
-              liqorTokenValues[minNetIndex]
-            ))
+          transaction.add(makePartialLiquidateInstruction(
+            programId,
+            mangoGroup.publicKey,
+            payer.publicKey,
+            liqorAccs[minNetIndex].publicKey,
+            liqorAccs[maxNetIndex].publicKey,
+            ma.publicKey,
+            mangoGroup.vaults[minNetIndex],
+            mangoGroup.vaults[maxNetIndex],
+            mangoGroup.signerKey,
+            ma.openOrders,
+            mangoGroup.oracles,
+            liqorTokenValues[minNetIndex]
+          ))
 
-            await client.sendTransaction(connection, transaction, payer, [])
-            console.log('Successful partial liquidation')
-            notify(`Successful partial liquidation ${ma.publicKey.toBase58()}`)
-            liquidated = true
-            break
-          } catch (e) {
-            if (!e.timeout) {
-              throw e
-            } else {
-              await sleep(1000)
-              prices = await mangoGroup.getPrices(connection)
-              ma = await client.getMarginAccount(connection, ma.publicKey, dexProgramId)
-            }
+          await client.sendTransaction(connection, transaction, payer, [])
+          await sleep(2000)
+          ma = await client.getMarginAccount(connection, ma.publicKey, dexProgramId)
+          console.log(`Successful partial liquidation\n${ma.toPrettyString(mangoGroup, prices)}\nbeingLiquidated: ${ma.beingLiquidated}`)
+          notify(`Successful partial liquidation\n${ma.toPrettyString(mangoGroup, prices)}\nbeingLiquidated: ${ma.beingLiquidated}`)
+          liquidated = true
+          break
+        } catch (e) {
+          if (!e.timeout) {
+            throw e
+          } else {
+            notify(`unknown error: ${e}`);
+            console.error(e);
           }
         }
       }
-      console.log(`Max Borrow Account: ${maxBorrAcc}   |   Max Borrow Val: ${maxBorrVal}`)
 
+      console.log(`Max Borrow Account: ${maxBorrAcc}   |   Max Borrow Val: ${maxBorrVal}`)
       await balanceWallets(connection, mangoGroup, prices, markets, payer, tokenWallets, liqorTokenUi, liqorOpenOrdersKeys, targets)
 
     } catch (e) {
