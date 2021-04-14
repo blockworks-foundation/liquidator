@@ -216,18 +216,18 @@ async function runPartialLiquidator() {
           }
 
           if (liabsVal < 0.1) {  // too small of an account; number precision may cause errors
-            break
+            continue
           }
 
           if (!ma.beingLiquidated) {
             let collRatio = (assetsVal / liabsVal)
             if (collRatio + coll_bias >= mangoGroup.maintCollRatio) {
-              break
+              continue
             }
 
             const deficit = liabsVal * mangoGroup.initCollRatio - assetsVal
             if (deficit < 0.1) {  // too small of an account; number precision may cause errors
-              break
+              continue
             }
           }
           description = ma.toPrettyString(mangoGroup, prices)

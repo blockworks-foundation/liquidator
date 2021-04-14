@@ -172,7 +172,7 @@ async function runLiquidator() {
           }
 
           if (liabsVal < 0.1) {  // too small of an account; number precision may cause errors
-            break
+            continue
           }
           let collRatio = (assetsVal / liabsVal)
 
@@ -181,14 +181,14 @@ async function runLiquidator() {
             collRatio += parseFloat(process.env.COLL_BIAS);
           }
           if (collRatio >= mangoGroup.maintCollRatio) {
-            break
+            continue
           }
 
           const deficit = liabsVal * mangoGroup.initCollRatio - assetsVal
           description = ma.toPrettyString(mangoGroup, prices)
 
           if (deficit < 0.1) {  // too small of an account; number precision may cause errors
-            break
+            continue
           }
           console.log('liquidatable', deficit)
           console.log(description)
