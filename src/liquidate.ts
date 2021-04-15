@@ -7,7 +7,7 @@ import {
   MarginAccount,
   nativeToUi,
   NUM_MARKETS,
-  NUM_TOKENS,
+  NUM_TOKENS, parseTokenAccount,
   parseTokenAccountData, tokenToDecimals, uiToNative,
 } from '@blockworks-foundation/mango-client';
 import { Account, Connection, PublicKey, Transaction, TransactionSignature } from '@solana/web3.js';
@@ -146,15 +146,21 @@ async function runLiquidator() {
   while (true) {
     try {
       mangoGroup = await client.getMangoGroup(connection, mangoGroupPk)
-      const marginAccounts = await client.getAllMarginAccounts(connection, programId, mangoGroup)
-      let prices = await mangoGroup.getPrices(connection)  // TODO put this on websocket as well
+      let [marginAccounts, prices, vaultAccs, liqorAccs] = await Promise.all([
+        client.getAllMarginAccounts(connection, programId, mangoGroup),
+        mangoGroup.getPrices(connection),
+        getMultipleAccounts(connection, mangoGroup.vaults),
+        getMultipleAccounts(connection, tokenWallets),
+      ])
 
-      console.log(prices)
-
-      const tokenAccs = await getMultipleAccounts(connection, mangoGroup.vaults)
-      const vaultValues = tokenAccs.map(
+      const vaultValues = vaultAccs.map(
         (a, i) => nativeToUi(parseTokenAccountData(a.accountInfo.data).amount, mangoGroup.mintDecimals[i])
       )
+      const liqorTokenUi = liqorAccs.map(
+        (a, i) => nativeToUi(parseTokenAccountData(a.accountInfo.data).amount, mangoGroup.mintDecimals[i])
+      )
+
+      console.log(prices)
       console.log(vaultValues)
 
       let maxBorrAcc = ""
@@ -193,8 +199,10 @@ async function runLiquidator() {
           console.log('liquidatable', deficit)
           console.log(description)
 
+          let depositAmount = Math.min(deficit * 1.01 + 5, liqorTokenUi[NUM_TOKENS-1])
+
           await client.liquidate(connection, programId, mangoGroup, ma, payer,
-            tokenWallets, [0, 0, deficit * 1.01 + 5])
+            tokenWallets, [0, 0, depositAmount])
           liquidated = true
         } catch (e) {
           if (!e.timeout) {
