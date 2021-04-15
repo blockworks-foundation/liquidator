@@ -196,11 +196,13 @@ async function runLiquidator() {
           if (deficit < 0.1) {  // too small of an account; number precision may cause errors
             continue
           }
+          const depositAmount = deficit * 1.01 + 5
+          if (liqorTokenUi[NUM_TOKENS-1] < depositAmount) {
+            console.log(`Liquidator does not have enough funds. ${liqorTokenUi[NUM_TOKENS-1]} < ${depositAmount}`)
+            continue
+          }
           console.log('liquidatable', deficit)
           console.log(description)
-
-          let depositAmount = Math.min(deficit * 1.01 + 5, liqorTokenUi[NUM_TOKENS-1])
-
           await client.liquidate(connection, programId, mangoGroup, ma, payer,
             tokenWallets, [0, 0, depositAmount])
           liquidated = true
