@@ -331,6 +331,7 @@ async function runPartialLiquidator() {
           ma = await client.getMarginAccount(connection, ma.publicKey, dexProgramId)
           console.log(`Successful partial liquidation\n${ma.toPrettyString(mangoGroup, prices)}\nbeingLiquidated: ${ma.beingLiquidated}`)
           notify(`Successful partial liquidation\n${ma.toPrettyString(mangoGroup, prices)}\nbeingLiquidated: ${ma.beingLiquidated}`)
+          break  // This is so wallets get balanced
         } catch (e) {
           if (!e.timeout) {
             throw e
