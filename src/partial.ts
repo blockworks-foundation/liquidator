@@ -159,7 +159,7 @@ async function runPartialLiquidator() {
   const markets = await Promise.all(mangoGroup.spotMarkets.map(
     (pk) => Market.load(connection, pk, {skipPreflight: true, commitment: 'singleGossip'}, dexProgramId)
   ))
-  const sleepTime = 5000
+  const sleepTime = 0
   // TODO handle failures in any of the steps
   // Find a way to get all margin accounts without querying fresh--get incremental updates to margin accounts
 
