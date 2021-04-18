@@ -3,16 +3,15 @@ import {
   getMultipleAccounts,
   IDS,
   MangoClient,
-  MangoGroup,
-  MarginAccount,
+  MangoGroup, MarginAccount,
   nativeToUi,
   NUM_MARKETS,
   NUM_TOKENS,
   parseTokenAccount,
-  parseTokenAccountData, tokenToDecimals,
-  uiToNative,
+  parseTokenAccountData,
+  tokenToDecimals,
 } from '@blockworks-foundation/mango-client';
-import { Account, Connection, PublicKey, Transaction, TransactionSignature } from '@solana/web3.js';
+import { Account, Connection, PublicKey, Transaction } from '@solana/web3.js';
 import { homedir } from 'os';
 import fs from 'fs';
 import { notify, sleep } from './utils';
@@ -41,17 +40,15 @@ async function balanceWallets(
   targets: number[]
 ) {
   const liqorOpenOrders = await Promise.all(liqorOpenOrdersKeys.map((pk) => OpenOrders.load(connection, pk, mangoGroup.dexProgramId)))
-  let updateWallets = false
   for (let i = 0; i < NUM_MARKETS; i++) {
     const oo = liqorOpenOrders[i]
     if (parseFloat(oo.quoteTokenTotal.toString()) > 0 || parseFloat(oo.baseTokenTotal.toString()) > 0) {
       console.log(`Settling funds on liqor wallet ${i}`)
       await markets[i].settleFunds(connection, liqor, oo, liqorWallets[i], liqorWallets[NUM_TOKENS-1])
-      updateWallets = true
     }
   }
 
-  await sleep(1000)
+  await sleep(1000) // Wait for account wallets to update
   const liqorWalletAccounts = await getMultipleAccounts(connection, liqorWallets)
   liqorValuesUi = liqorWalletAccounts.map(
     (a, i) => nativeToUi(parseTokenAccountData(a.accountInfo.data).amount, mangoGroup.mintDecimals[i])
@@ -91,9 +88,10 @@ async function balanceWallets(
           size,
           orderType: 'ioc',
           openOrdersAddressKey: liqorOpenOrdersKeys[marketIndex],
-          feeDiscountPubkey: null
+          feeDiscountPubkey: null  // TODO find liqor's SRM fee account
         }
       )
+      // TODO add a SettleFunds instruction to this transaction
       console.log(`Place order successful: ${txid}; Settling funds`)
       await market.settleFunds(connection, liqor, liqorOpenOrders[marketIndex], liqorWallets[marketIndex], liqorWallets[NUM_TOKENS-1])
 
@@ -127,6 +125,7 @@ async function runPartialLiquidator() {
   const group_name = process.env.GROUP_NAME || 'BTC_ETH_USDT'
   const clusterUrl = process.env.CLUSTER_URL || IDS.cluster_urls[cluster]
   const targetsStr = process.env.TARGETS || "0.1 2"
+  const checkInterval = parseFloat(process.env.CHECK_INTERVAL || "1000.0")
   const targets = targetsStr.split(' ').map((s) => parseFloat(s))
   const connection = new Connection(clusterUrl, 'singleGossip')
 
@@ -159,10 +158,8 @@ async function runPartialLiquidator() {
   const markets = await Promise.all(mangoGroup.spotMarkets.map(
     (pk) => Market.load(connection, pk, {skipPreflight: true, commitment: 'singleGossip'}, dexProgramId)
   ))
-  const sleepTime = 1000
   // TODO handle failures in any of the steps
   // Find a way to get all margin accounts without querying fresh--get incremental updates to margin accounts
-
   const liqorOpenOrdersKeys: PublicKey[] = []
 
   for (let i = 0; i < NUM_MARKETS; i++) {
@@ -192,6 +189,7 @@ async function runPartialLiquidator() {
         (a, i) => nativeToUi(parseTokenAccountData(a.accountInfo.data).amount, mangoGroup.mintDecimals[i])
       )
 
+      console.log(prices)
       console.log(vaultValues)
       console.log(liqorTokenUi)
 
@@ -201,18 +199,17 @@ async function runPartialLiquidator() {
         coll_bias = parseFloat(process.env.COLL_BIAS)
       }
 
-      let maxBorrAcc = ""
+      let maxBorrAcc: MarginAccount | undefined = undefined;
       let maxBorrVal = 0;
       for (let ma of marginAccounts) {  // parallelize this if possible
 
-        let liquidated = false
         let description = ''
         try {
           const assetsVal = ma.getAssetsVal(mangoGroup, prices)
           const liabsVal = ma.getLiabsVal(mangoGroup, prices)
           if (liabsVal > maxBorrVal) {
             maxBorrVal = liabsVal
-            maxBorrAcc = ma.publicKey.toBase58()
+            maxBorrAcc = ma
           }
 
           if (liabsVal < 0.1) {  // too small of an account; number precision may cause errors
@@ -334,8 +331,6 @@ async function runPartialLiquidator() {
           ma = await client.getMarginAccount(connection, ma.publicKey, dexProgramId)
           console.log(`Successful partial liquidation\n${ma.toPrettyString(mangoGroup, prices)}\nbeingLiquidated: ${ma.beingLiquidated}`)
           notify(`Successful partial liquidation\n${ma.toPrettyString(mangoGroup, prices)}\nbeingLiquidated: ${ma.beingLiquidated}`)
-          liquidated = true
-          break
         } catch (e) {
           if (!e.timeout) {
             throw e
@@ -346,14 +341,16 @@ async function runPartialLiquidator() {
         }
       }
 
-      console.log(`Max Borrow Account: ${maxBorrAcc}   |   Max Borrow Val: ${maxBorrVal}`)
+      const maxBorrAccPk = maxBorrAcc ? maxBorrAcc.publicKey.toBase58() : ""
+      const maxBorrAccCr = maxBorrAcc ? maxBorrAcc.getCollateralRatio(mangoGroup, prices) : 0
+      console.log(`Max Borrow Account: ${maxBorrAccPk} | Max Borrow Val: ${maxBorrVal} | CR: ${maxBorrAccCr}`)
       await balanceWallets(connection, mangoGroup, prices, markets, payer, tokenWallets, liqorTokenUi, liqorOpenOrdersKeys, targets)
 
     } catch (e) {
       notify(`unknown error: ${e}`);
       console.error(e);
     } finally {
-      await sleep(sleepTime)
+      await sleep(checkInterval)
     }
   }
 
