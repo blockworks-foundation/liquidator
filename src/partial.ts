@@ -215,7 +215,7 @@ async function runPartialLiquidator() {
             maxBorrAcc = ma.publicKey.toBase58()
           }
 
-          if (liabsVal < 0.1) {  // too small of an account; number precision may cause errors
+          if (liabsVal < 20000) {  // too small of an account; number precision may cause errors
             continue
           }
 
