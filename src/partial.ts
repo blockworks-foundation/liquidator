@@ -48,7 +48,7 @@ async function balanceWallets(
     }
   }
 
-  await sleep(1000) // Wait for account wallets to update
+  await sleep(3000) // Wait for account wallets to update
   const liqorWalletAccounts = await getMultipleAccounts(connection, liqorWallets)
   liqorValuesUi = liqorWalletAccounts.map(
     (a, i) => nativeToUi(parseTokenAccountData(a.accountInfo.data).amount, mangoGroup.mintDecimals[i])
@@ -358,3 +358,5 @@ async function runPartialLiquidator() {
 }
 
 runPartialLiquidator()
+
+
