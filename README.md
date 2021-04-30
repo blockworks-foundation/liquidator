@@ -1,6 +1,14 @@
 # Mango Liquidator
 
 ## Setup Partial Liquidator
+### Prerequisites
+To run the liquidator you will need:
+* A Solana account with some SOL deposited to cover transaction fees
+* Token accounts for each currency in the Mango Group (e.g. BTC, ETH, USDT)
+* Roughly equal deposits for each token. You will need base currencies to liquidate shorts, and quote currency to liquidate longs.
+* Serum Dex OpenOrders accounts associated with your account. This is required for balance wallets functionality.
+  * The easiest way to set these up is by placing an order on Serum Dex for each currency pair then immediately cancelling it.
+### Setup
 Make sure to edit the .env file to look something like this:
 ```
 export CLUSTER="mainnet-beta"

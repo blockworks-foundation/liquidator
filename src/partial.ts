@@ -164,7 +164,15 @@ async function runPartialLiquidator() {
 
   for (let i = 0; i < NUM_MARKETS; i++) {
     let openOrdersAccounts: OpenOrders[] = await markets[i].findOpenOrdersAccountsForOwner(connection, payer.publicKey)
-    liqorOpenOrdersKeys.push(openOrdersAccounts[0].publicKey)
+    if(openOrdersAccounts.length) {
+      liqorOpenOrdersKeys.push(openOrdersAccounts[0].publicKey)
+    } else {
+      console.log(`No OpenOrders account found for market ${markets[i].publicKey.toBase58()}`)
+    }
+  }
+
+  if(liqorOpenOrdersKeys.length != NUM_MARKETS) {
+    console.log('Warning: Missing OpenOrders accounts. Wallet balancing has been disabled.')
   }
 
   const cancelLimit = 5
@@ -345,7 +353,11 @@ async function runPartialLiquidator() {
       const maxBorrAccPk = maxBorrAcc ? maxBorrAcc.publicKey.toBase58() : ""
       const maxBorrAccCr = maxBorrAcc ? maxBorrAcc.getCollateralRatio(mangoGroup, prices) : 0
       console.log(`Max Borrow Account: ${maxBorrAccPk} | Max Borrow Val: ${maxBorrVal} | CR: ${maxBorrAccCr}`)
-      await balanceWallets(connection, mangoGroup, prices, markets, payer, tokenWallets, liqorTokenUi, liqorOpenOrdersKeys, targets)
+      if(liqorOpenOrdersKeys.length == NUM_MARKETS) {
+        await balanceWallets(connection, mangoGroup, prices, markets, payer, tokenWallets, liqorTokenUi, liqorOpenOrdersKeys, targets)
+      } else {
+        console.log('Could not balance wallets due to missing OpenOrders account')
+      }
 
     } catch (e) {
       notify(`unknown error: ${e}`);
