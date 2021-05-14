@@ -11,7 +11,7 @@ import {
   parseTokenAccountData,
   tokenToDecimals,
 } from '@blockworks-foundation/mango-client';
-import { Account, Connection, PublicKey, Transaction } from '@solana/web3.js';
+import { Account, Commitment, Connection, PublicKey, Transaction } from '@solana/web3.js';
 import { homedir } from 'os';
 import fs from 'fs';
 import { notify, sleep } from './utils';
@@ -39,22 +39,41 @@ async function balanceWallets(
   liqorOpenOrdersKeys: PublicKey[],
   targets: number[]
 ) {
+
+  // Retrieve orders from order book by owner
+  const liqorOrders = await Promise.all(markets.map((m) =>
+    m.loadOrdersForOwner(connection, liqor.publicKey)));
+
+  // Cancel all
+  const cancelTransactions: Promise<string>[] = []
+  for (let i = 0; i < NUM_MARKETS; i++) {
+    for (let order of liqorOrders[i]) {
+      console.log(`Cancelling liqor order on market ${i} size=${order.size} price=${order.price}`)
+      cancelTransactions.push(markets[i].cancelOrder(connection, liqor, order));
+    }
+  }
+  await Promise.all(cancelTransactions)
+
+  // Load open orders accounts
   const liqorOpenOrders = await Promise.all(liqorOpenOrdersKeys.map((pk) => OpenOrders.load(connection, pk, mangoGroup.dexProgramId)))
+
+  // Settle all
+  const settleTransactions: Promise<string>[] = []
   for (let i = 0; i < NUM_MARKETS; i++) {
     const oo = liqorOpenOrders[i]
     if (parseFloat(oo.quoteTokenTotal.toString()) > 0 || parseFloat(oo.baseTokenTotal.toString()) > 0) {
-      console.log(`Settling funds on liqor wallet ${i}`)
-      await markets[i].settleFunds(connection, liqor, oo, liqorWallets[i], liqorWallets[NUM_TOKENS-1])
+      console.log(`Settling funds to liqor wallet ${i} quote:${oo.quoteTokenTotal.toString()} base:${oo.baseTokenTotal.toString()}`)
+      settleTransactions.push(markets[i].settleFunds(connection, liqor, oo, liqorWallets[i], liqorWallets[NUM_TOKENS-1]))
     }
   }
+  await Promise.all(settleTransactions)
 
-  await sleep(5000) // Wait for account wallets to update
-  const liqorWalletAccounts = await getMultipleAccounts(connection, liqorWallets)
+  // Account wallets should instantly update
+  const liqorWalletAccounts = await getMultipleAccounts(connection, liqorWallets, 'processed' as Commitment)
   liqorValuesUi = liqorWalletAccounts.map(
     (a, i) => nativeToUi(parseTokenAccountData(a.accountInfo.data).amount, mangoGroup.mintDecimals[i])
   )
 
-  // TODO cancel outstanding orders as well
   const diffs: number[] = []
   const netValues: [number, number][] = []
   // Go to each base currency and see if it's above or below target
@@ -184,7 +203,7 @@ async function runPartialLiquidator() {
         client.getAllMarginAccounts(connection, programId, mangoGroup),
         mangoGroup.getPrices(connection),
         getMultipleAccounts(connection, mangoGroup.vaults),
-        getMultipleAccounts(connection, tokenWallets),
+        getMultipleAccounts(connection, tokenWallets, 'processed' as Commitment),
       ])
 
       const vaultValues = vaultAccs.map(
@@ -209,6 +228,8 @@ async function runPartialLiquidator() {
 
       let maxBorrAcc: MarginAccount | undefined = undefined;
       let maxBorrVal = 0;
+      let minCollAcc: MarginAccount | undefined = undefined;
+      let minCollVal = 99999;
       for (let ma of marginAccounts) {  // parallelize this if possible
 
         let description = ''
@@ -226,14 +247,22 @@ async function runPartialLiquidator() {
 
           if (!ma.beingLiquidated) {
             let collRatio = (assetsVal / liabsVal)
-            if (collRatio + coll_bias >= mangoGroup.maintCollRatio) {
-              continue
-            }
 
             const deficit = liabsVal * mangoGroup.initCollRatio - assetsVal
             if (deficit < 0.1) {  // too small of an account; number precision may cause errors
               continue
             }
+
+            if (collRatio < minCollVal)
+            {
+              minCollVal = collRatio
+              minCollAcc = ma
+            }
+
+            if (collRatio + coll_bias >= mangoGroup.maintCollRatio) {
+              continue
+            }
+
           }
           description = ma.toPrettyString(mangoGroup, prices)
           console.log(`Liquidatable\n${description}\nbeingLiquidated: ${ma.beingLiquidated}`)
@@ -352,7 +381,11 @@ async function runPartialLiquidator() {
 
       const maxBorrAccPk = maxBorrAcc ? maxBorrAcc.publicKey.toBase58() : ""
       const maxBorrAccCr = maxBorrAcc ? maxBorrAcc.getCollateralRatio(mangoGroup, prices) : 0
-      console.log(`Max Borrow Account: ${maxBorrAccPk} | Max Borrow Val: ${maxBorrVal} | CR: ${maxBorrAccCr}`)
+      const minCollAccPk = minCollAcc ? minCollAcc.publicKey.toBase58() : ""
+      const minCollBorrVal = minCollAcc ? minCollAcc.getLiabsVal(mangoGroup, prices) : 0
+
+      console.log(`Max Borrow Account: ${maxBorrAccPk} | Borrow Val: ${maxBorrVal} | CR: ${maxBorrAccCr}`)
+      console.log(`Min Coll-Ratio Account: ${minCollAccPk} | Borrow Val: ${minCollBorrVal} | CR: ${minCollVal}`)
       if(liqorOpenOrdersKeys.length == NUM_MARKETS) {
         await balanceWallets(connection, mangoGroup, prices, markets, payer, tokenWallets, liqorTokenUi, liqorOpenOrdersKeys, targets)
       } else {
@@ -370,5 +403,4 @@ async function runPartialLiquidator() {
 }
 
 runPartialLiquidator()
-
 
