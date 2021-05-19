@@ -14,6 +14,7 @@ Make sure to edit the .env file to look something like this:
 export CLUSTER="mainnet-beta"
 export CLUSTER_URL="https://solana-api.projectserum.com"
 export KEYPAIR=~/.config/solana/id.json
+export SAVE_LOGS="true"
 export NODE_ENV=production
 export TARGETS="0.1 2"
 export GROUP_NAME="BTC_ETH_USDT"
