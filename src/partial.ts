@@ -14,7 +14,7 @@ import {
 import { Account, Commitment, Connection, PublicKey, Transaction } from '@solana/web3.js';
 import { homedir } from 'os';
 import fs from 'fs';
-import { notify, sleep } from './utils';
+import { extendConsole, notify, sleep } from './utils';
 import { Market, OpenOrders } from '@project-serum/serum';
 import {
   makeForceCancelOrdersInstruction,
@@ -22,6 +22,7 @@ import {
 } from '@blockworks-foundation/mango-client/lib/instruction';
 import BN = require('bn.js');
 
+if(process.env.SAVE_LOGS && process.env.SAVE_LOGS.toLowerCase().trim() === "true"){ extendConsole(); }
 
 /*
   After a liquidation, the amounts in each wallet become unbalanced
