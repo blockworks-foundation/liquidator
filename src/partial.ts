@@ -198,9 +198,11 @@ async function runPartialLiquidator() {
   while (true) {
     try {
       mangoGroup = await client.getMangoGroup(connection, mangoGroupPk)
+      let marginAccounts = process.env.FILTER_ACCOUNTS ? 
+        await client.getAllMarginAccountsWithBorrows(connection, programId, mangoGroup) :
+        await client.getAllMarginAccounts(connection, programId, mangoGroup)
 
-      let [marginAccounts, prices, vaultAccs, liqorAccs] = await Promise.all([
-        client.getAllMarginAccounts(connection, programId, mangoGroup),
+      let [prices, vaultAccs, liqorAccs] = await Promise.all([
         mangoGroup.getPrices(connection),
         getMultipleAccounts(connection, mangoGroup.vaults),
         getMultipleAccounts(connection, tokenWallets, 'processed' as Commitment),
