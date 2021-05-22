@@ -141,7 +141,7 @@ async function balanceWallets(
 async function runPartialLiquidator() {
   const client = new MangoClient()
   const cluster = process.env.CLUSTER || 'mainnet-beta'
-  const group_name = process.env.GROUP_NAME || 'BTC_ETH_USDT'
+  const group_name = process.env.GROUP_NAME || 'BTC_ETH_SOL_SRM_USDT'
   const clusterUrl = process.env.CLUSTER_URL || IDS.cluster_urls[cluster]
   const targetsStr = process.env.TARGETS || "0.1 2"
   const checkInterval = parseFloat(process.env.CHECK_INTERVAL || "1000.0")
