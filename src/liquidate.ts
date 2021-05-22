@@ -69,7 +69,7 @@ async function drainAccount(
   for (let i = 0; i < NUM_TOKENS - 1; i++) {
     const marketIndex = netValues[i][0]
     const market = markets[marketIndex]
-    const tokenDecimals = tokenToDecimals[marketIndex === 0 ? 'BTC' : 'ETH']
+    const tokenDecimals = mangoGroup.getTokenDecimals(marketIndex)
     const tokenDecimalAdj = Math.pow(10, tokenDecimals)
 
     if (netValues[i][1] > 0) { // sell to close
