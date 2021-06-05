@@ -15,7 +15,7 @@ export CLUSTER="mainnet-beta"
 export CLUSTER_URL="https://solana-api.projectserum.com"
 export KEYPAIR=~/.config/solana/id.json
 export NODE_ENV=production
-export TARGETS="0.1 2 100 500"
+export TARGETS="0.1 2.0 100.0 500.0"
 export GROUP_NAME="BTC_ETH_SOL_SRM_USDT"
 export CHECK_INTERVAL="1000.0"
 export FILTER_ACCOUNTS=true
@@ -33,16 +33,6 @@ FILTER_ACCOUNTS uses a more efficient method of querying marginAccounts by only 
 yarn install
 source .env
 yarn partialLiquidate
-```
-
-## Setup Full Liquidator [DEPRECATED]
-Make sure to edit the .env file to look something like this:
-```
-export CLUSTER="mainnet-beta"
-export CLUSTER_URL="https://solana-api.projectserum.com"
-export KEYPAIR=~/.config/solana/id.json
-export NODE_ENV=production
-export GROUP_NAME="BTC_ETH_SOL_SRM_USDT"
 ```
 
 ### Run
