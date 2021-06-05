@@ -312,7 +312,7 @@
 
 "@blockworks-foundation/mango-client@https://github.com/blockworks-foundation/mango-client-ts#5_tokens":
   version "0.1.19"
-  resolved "https://github.com/blockworks-foundation/mango-client-ts#e0627fcd34b06844ede05f65317e8c7ce9d2b29d"
+  resolved "https://github.com/blockworks-foundation/mango-client-ts#9bf82ed3b11297c078117cf369c463850a14e66a"
   dependencies:
     "@project-serum/common" "^0.0.1-beta.3"
     "@project-serum/serum" "^0.13.20"
