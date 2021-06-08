@@ -321,19 +321,16 @@ async function runPartialLiquidator() {
             // too small of an account; number precision may cause errors
             continue;
           }
-
+          let collRatio = assetsVal / liabsVal;
+          if (collRatio < minCollVal) {
+            minCollVal = collRatio;
+            minCollAcc = ma;
+          }
           if (!ma.beingLiquidated) {
-            let collRatio = assetsVal / liabsVal;
-
             const deficit = liabsVal * mangoGroup.initCollRatio - assetsVal;
             if (deficit < 0.1) {
               // too small of an account; number precision may cause errors
               continue;
-            }
-
-            if (collRatio < minCollVal) {
-              minCollVal = collRatio;
-              minCollAcc = ma;
             }
 
             if (collRatio + coll_bias >= mangoGroup.maintCollRatio) {
