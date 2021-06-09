@@ -13,7 +13,7 @@ async function setupMarginAccounts() {
   const clusterIds = IDS[cluster]
 
   const connection = new Connection(IDS.cluster_urls[cluster], 'singleGossip')
-  const mangoGroupPk = new PublicKey(clusterIds.mango_groups.BTC_ETH_USDC.mango_group_pk);
+  const mangoGroupPk = new PublicKey(clusterIds.mango_groups['BTC_ETH_USDC'].mango_group_pk);
   const mangoProgramId = new PublicKey(clusterIds.mango_program_id);
   const dexProgramId = new PublicKey(clusterIds.dex_program_id)
 
@@ -139,7 +139,7 @@ async function testing() {
   const dexProgramId = new PublicKey(IDS[cluster].dex_program_id)
 
   // Address of the MangoGroup
-  const mangoGroupPk = new PublicKey(IDS[cluster].mango_groups.BTC_ETH_USDC.mango_group_pk)
+  const mangoGroupPk = new PublicKey(IDS[cluster].mango_groups['BTC_ETH_USDC'].mango_group_pk)
 
 
   // TODO fetch these automatically
