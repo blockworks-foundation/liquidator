@@ -69,7 +69,7 @@ async function drainAccount(
   for (let i = 0; i < NUM_TOKENS - 1; i++) {
     const marketIndex = netValues[i][0]
     const market = markets[marketIndex]
-    const tokenDecimals = tokenToDecimals[marketIndex === 0 ? 'BTC' : 'ETH']
+    const tokenDecimals = mangoGroup.getTokenDecimals(marketIndex)
     const tokenDecimalAdj = Math.pow(10, tokenDecimals)
 
     if (netValues[i][1] > 0) { // sell to close
@@ -106,7 +106,7 @@ async function drainAccount(
 async function runLiquidator() {
   const client = new MangoClient()
   const cluster = process.env.CLUSTER || 'mainnet-beta'
-  const group_name = process.env.GROUP_NAME || 'BTC_ETH_USDT'
+  const group_name = process.env.GROUP_NAME || 'BTC_ETH_SOL_SRM_USDT'
   const clusterUrl = process.env.CLUSTER_URL || IDS.cluster_urls[cluster]
   const connection = new Connection(clusterUrl, 'singleGossip')
 
@@ -146,8 +146,11 @@ async function runLiquidator() {
   while (true) {
     try {
       mangoGroup = await client.getMangoGroup(connection, mangoGroupPk)
-      let [marginAccounts, prices, vaultAccs, liqorAccs] = await Promise.all([
-        client.getAllMarginAccounts(connection, programId, mangoGroup),
+      let marginAccounts = process.env.FILTER_ACCOUNTS ? 
+        await client.getAllMarginAccountsWithBorrows(connection, programId, mangoGroup) :
+        await client.getAllMarginAccounts(connection, programId, mangoGroup)
+
+      let [prices, vaultAccs, liqorAccs] = await Promise.all([
         mangoGroup.getPrices(connection),
         getMultipleAccounts(connection, mangoGroup.vaults),
         getMultipleAccounts(connection, tokenWallets),

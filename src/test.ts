@@ -38,7 +38,7 @@ async function genMarginAccounts() {
   const dexProgramId = new PublicKey(IDS[cluster].dex_program_id)
 
   // Address of the MangoGroup
-  const mangoGroupPk = new PublicKey(IDS[cluster].mango_groups.BTC_ETH_USDC.mango_group_pk)
+  const mangoGroupPk = new PublicKey(IDS[cluster].mango_groups['BTC_ETH_USDC'].mango_group_pk)
 
   const keyPairPath = '/home/dd/.config/solana/id.json'
   const payer = new Account(JSON.parse(fs.readFileSync(keyPairPath, 'utf-8')))
