@@ -1,6 +1,6 @@
 {
   "name": "@mango/liquidator",
-  "version": "2.0.0",
+  "version": "2.1.0",
   "description": "Library for interacting with the serum dex",
   "engines": {
     "node": ">=10"
