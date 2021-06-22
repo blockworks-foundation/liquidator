@@ -339,7 +339,7 @@ async function runPartialLiquidator() {
           }
           if (!ma.beingLiquidated) {
             const deficit = liabsVal * mangoGroup.initCollRatio - assetsVal;
-            if (deficit < 0.1) {
+            if (deficit < 0.01) {
               // too small of an account; number precision may cause errors
               continue;
             }
