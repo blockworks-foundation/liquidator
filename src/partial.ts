@@ -450,28 +450,28 @@ async function runPartialLiquidator() {
             }
           }
 
-          if (minNetIndex !== -1) {
-            transaction.add(
-              makePartialLiquidateInstruction(
-                programId,
-                mangoGroup.publicKey,
-                payer.publicKey,
-                liqorAccs[minNetIndex].publicKey,
-                liqorAccs[maxNetIndex].publicKey,
-                ma.publicKey,
-                mangoGroup.vaults[minNetIndex],
-                mangoGroup.vaults[maxNetIndex],
-                mangoGroup.signerKey,
-                ma.openOrders,
-                mangoGroup.oracles,
-                liqorTokenValues[minNetIndex],
-              ),
-            );
+          if (minNetIndex === -1) {
+            // In this case, send a random token account that is not maxNetIndex
+            minNetIndex = (maxNetIndex + 1) % NUM_TOKENS;
           }
 
-          if (transaction.instructions.length === 0) {
-            continue;
-          }
+          transaction.add(
+            makePartialLiquidateInstruction(
+              programId,
+              mangoGroup.publicKey,
+              payer.publicKey,
+              liqorAccs[minNetIndex].publicKey,
+              liqorAccs[maxNetIndex].publicKey,
+              ma.publicKey,
+              mangoGroup.vaults[minNetIndex],
+              mangoGroup.vaults[maxNetIndex],
+              mangoGroup.signerKey,
+              ma.openOrders,
+              mangoGroup.oracles,
+              liqorTokenValues[minNetIndex],
+            ),
+          );
+
           await client.sendTransaction(connection, transaction, payer, []);
           await sleep(2000);
           ma = await client.getMarginAccount(
