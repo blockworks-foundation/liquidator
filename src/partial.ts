@@ -74,7 +74,9 @@ async function balanceWallets(
   for (let i = 0; i < NUM_MARKETS; i++) {
     const oo = liqorOpenOrders[i];
     if (
-      parseFloat(oo.quoteTokenTotal.toString()) > 0 ||
+      parseFloat(oo.quoteTokenTotal.toString()) +
+        parseFloat(oo['referrerRebatesAccrued'].toString()) >
+        0 ||
       parseFloat(oo.baseTokenTotal.toString()) > 0
     ) {
       console.log(
@@ -364,6 +366,7 @@ async function runPartialLiquidator() {
             }
             const marketVal =
               openOrdersAccount.quoteTokenTotal.toNumber() +
+              openOrdersAccount['referrerRebatesAccrued'].toNumber() +
               openOrdersAccount.baseTokenTotal.toNumber() * prices[i];
             if (marketVal > maxMarketVal) {
               maxMarketIndex = i;
