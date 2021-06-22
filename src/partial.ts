@@ -354,8 +354,6 @@ async function runPartialLiquidator() {
             `Liquidatable\n${description}\nbeingLiquidated: ${ma.beingLiquidated}`,
           );
 
-          console.log(markets);
-
           // find the market with the most value in OpenOrdersAccount
           let maxMarketIndex = -1;
           let maxMarketVal = 0;
@@ -468,6 +466,9 @@ async function runPartialLiquidator() {
             );
           }
 
+          if (transaction.instructions.length === 0) {
+            continue;
+          }
           await client.sendTransaction(connection, transaction, payer, []);
           await sleep(2000);
           ma = await client.getMarginAccount(
