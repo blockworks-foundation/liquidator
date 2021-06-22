@@ -317,7 +317,7 @@ async function runPartialLiquidator() {
             maxBorrAcc = ma;
           }
 
-          if (liabsVal < 0.1) {
+          if (liabsVal < 0.5) {
             // too small of an account; number precision may cause errors
             continue;
           }
