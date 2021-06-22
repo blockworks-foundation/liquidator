@@ -179,6 +179,13 @@ async function balanceWallets(
   }
 }
 
+function shuffleArray(array) {
+  for (let i = array.length - 1; i > 0; i--) {
+    const j = Math.floor(Math.random() * (i + 1));
+    [array[i], array[j]] = [array[j], array[i]];
+  }
+}
+
 async function runPartialLiquidator() {
   const client = new MangoClient();
   const cluster = process.env.CLUSTER || 'mainnet-beta';
@@ -265,6 +272,7 @@ async function runPartialLiquidator() {
           )
         : await client.getAllMarginAccounts(connection, programId, mangoGroup);
 
+      shuffleArray(marginAccounts);
       let [prices, vaultAccs, liqorAccs] = await Promise.all([
         mangoGroup.getPrices(connection),
         getMultipleAccounts(connection, mangoGroup.vaults),
@@ -305,6 +313,7 @@ async function runPartialLiquidator() {
       let maxBorrVal = 0;
       let minCollAcc: MarginAccount | undefined = undefined;
       let minCollVal = 99999;
+
       for (let ma of marginAccounts) {
         // parallelize this if possible
 
