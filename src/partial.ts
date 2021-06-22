@@ -326,7 +326,7 @@ async function runPartialLiquidator() {
             maxBorrAcc = ma;
           }
 
-          if (liabsVal < 0.5) {
+          if (liabsVal < 1) {
             // too small of an account; number precision may cause errors
             continue;
           }
@@ -353,6 +353,8 @@ async function runPartialLiquidator() {
           notify(
             `Liquidatable\n${description}\nbeingLiquidated: ${ma.beingLiquidated}`,
           );
+
+          console.log(markets);
 
           // find the market with the most value in OpenOrdersAccount
           let maxMarketIndex = -1;
@@ -447,22 +449,24 @@ async function runPartialLiquidator() {
             }
           }
 
-          transaction.add(
-            makePartialLiquidateInstruction(
-              programId,
-              mangoGroup.publicKey,
-              payer.publicKey,
-              liqorAccs[minNetIndex].publicKey,
-              liqorAccs[maxNetIndex].publicKey,
-              ma.publicKey,
-              mangoGroup.vaults[minNetIndex],
-              mangoGroup.vaults[maxNetIndex],
-              mangoGroup.signerKey,
-              ma.openOrders,
-              mangoGroup.oracles,
-              liqorTokenValues[minNetIndex],
-            ),
-          );
+          if (minNetIndex !== -1) {
+            transaction.add(
+              makePartialLiquidateInstruction(
+                programId,
+                mangoGroup.publicKey,
+                payer.publicKey,
+                liqorAccs[minNetIndex].publicKey,
+                liqorAccs[maxNetIndex].publicKey,
+                ma.publicKey,
+                mangoGroup.vaults[minNetIndex],
+                mangoGroup.vaults[maxNetIndex],
+                mangoGroup.signerKey,
+                ma.openOrders,
+                mangoGroup.oracles,
+                liqorTokenValues[minNetIndex],
+              ),
+            );
+          }
 
           await client.sendTransaction(connection, transaction, payer, []);
           await sleep(2000);
