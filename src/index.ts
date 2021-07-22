@@ -1,3 +1,5 @@
+import * as Env from 'dotenv';
+Env.config();
 import { IDS, MangoClient, MarginAccount, NUM_MARKETS } from '@blockworks-foundation/mango-client';
 
 import { Account, Connection, PublicKey } from '@solana/web3.js';
