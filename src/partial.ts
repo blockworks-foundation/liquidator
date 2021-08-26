@@ -455,7 +455,11 @@ async function runPartialLiquidator() {
             minNetIndex = (maxNetIndex + 1) % NUM_TOKENS;
           }
 
-          transaction.add(
+          await client.sendTransaction(connection, transaction, payer, []);
+
+          const liqTx = new Transaction();
+
+          liqTx.add(
             makePartialLiquidateInstruction(
               programId,
               mangoGroup.publicKey,
@@ -472,7 +476,7 @@ async function runPartialLiquidator() {
             ),
           );
 
-          await client.sendTransaction(connection, transaction, payer, []);
+          await client.sendTransaction(connection, liqTx, payer, []);
           await sleep(2000);
           ma = await client.getMarginAccount(
             connection,
