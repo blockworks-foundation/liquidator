@@ -11,14 +11,19 @@ To run the liquidator you will need:
 ### Setup
 Make sure to edit the .env file to look something like this:
 ```
-export CLUSTER="mainnet-beta"
-export CLUSTER_URL="https://solana-api.projectserum.com"
-export KEYPAIR=~/.config/solana/id.json
-export NODE_ENV=production
-export TARGETS="0.1 2.0 100.0 500.0"
-export GROUP_NAME="BTC_ETH_SOL_SRM_USDT"
-export CHECK_INTERVAL="1000.0"
-export FILTER_ACCOUNTS=true
+CLUSTER="mainnet-beta"
+CLUSTER_URL="https://solana-api.projectserum.com"
+KEYPAIR=${HOME}/.config/solana/id.json
+NODE_ENV=production
+TARGETS="0.1 2.0 100.0 500.0"
+GROUP_NAME="BTC_ETH_SOL_SRM_USDC"
+CHECK_INTERVAL="1000.0"
+FILTER_ACCOUNTS=true
+```
+
+Replace `${HOME}` with your actual path to home. For example,
+```
+KEYPAIR=/Users/john/.config/solana/id.json
 ```
 
 TARGETS represents the amounts of each token the partial liquidator should try to maintain

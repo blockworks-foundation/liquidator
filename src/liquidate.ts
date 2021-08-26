@@ -1,3 +1,5 @@
+import * as Env from 'dotenv';
+Env.config();
 import {
   findLargestTokenAccountForOwner,
   getMultipleAccounts,
