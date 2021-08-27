@@ -11,6 +11,7 @@
     "liquidate": "ts-node src/liquidate.ts",
     "partialLiquidate": "ts-node src/partial.ts",
     "test": "ts-node src/test.ts",
+    "reimburse": "ts-node src/reimburse.ts",
     "watch": "tsc --watch",
     "clean": "rm -rf dist",
     "prepare": "run-s clean build",
