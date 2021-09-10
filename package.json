@@ -34,7 +34,7 @@
     "typescript": "^4.0.5"
   },
   "dependencies": {
-    "@blockworks-foundation/mango-client": "^2.0.0",
+    "@blockworks-foundation/mango-client": "^2.1.5",
     "@project-serum/serum": "^0.13.20",
     "@solana/spl-token": "0.0.13",
     "@solana/web3.js": "^0.90.0",
