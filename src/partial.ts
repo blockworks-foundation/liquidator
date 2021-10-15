@@ -429,6 +429,7 @@ async function runPartialLiquidator() {
               transaction.add(instruction);
               numOrders -= cancelLimit;
               if (numOrders <= 0) {
+                await client.sendTransaction(connection, transaction, payer, []);
                 break;
               }
             }
@@ -457,7 +458,6 @@ async function runPartialLiquidator() {
             minNetIndex = (maxNetIndex + 1) % NUM_TOKENS;
           }
 
-          await client.sendTransaction(connection, transaction, payer, []);
 
           const liqTx = new Transaction();
 
