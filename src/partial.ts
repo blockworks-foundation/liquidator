@@ -22,7 +22,7 @@ import {
   Transaction,
 } from '@solana/web3.js';
 import { homedir } from 'os';
-import fs from 'fs';
+import * as fs from 'fs';
 import { notify, sleep } from './utils';
 import { Market, OpenOrders } from '@project-serum/serum';
 import {
